@@ -1,0 +1,136 @@
+use crate::syntax::*;
+
+grammar;
+
+match {
+    "->"
+} else {
+    _
+}
+
+pub Expr: Box<Expr> = {
+    Term,
+};
+
+Term: Box<Expr> = {
+    "fun" <params: ("(" Ident ":" Type ")")+> "->" <e:Expr> => {
+        let mut params1: Vec<(Ident, Type)> = vec![];
+        for (_lp, id, _colon, ty, _rp) in params {
+          params1.push((id.to_string(), *ty));
+        }
+        Box::new(Expr::Lambda(params1, e))
+    },
+
+    "let" <v:Ident> <opty: (":" Type)?>  "=" <e1:Expr> "in" <e2:Expr> => {
+        match opty {
+            None => Box::new(Expr::Let(v, None, e1, e2)),
+            Some((_, ty)) => Box::new(Expr::Let(v, Some(*ty), e1, e2))
+        }
+    },
+    "let" "rec" <def:Fundef> "in" <e:Expr> => {
+       Box::new(Expr::LetRec(def, e))
+    },
+    "if" <e1:Expr> "then" <e2:Expr> "else" <e3:Expr> => Box::new(Expr::If(e1, e2, e3)),
+    OrExpr,
+};
+
+Fundef: Fundef = {
+    <name:Ident> <params: ("(" Ident ":" Type ")")+> ":" <ty:Type> "=" <e:Expr> => {
+        let mut params1: Vec<(Ident, Type)> = vec![];
+        for (_lp, id, _colon, ty, _rp) in params {
+          params1.push((id.to_string(), *ty));
+        }
+        Fundef {name: name, args: params1, ret_type: *ty, body: e}
+    }
+};
+
+// Binary operators with precedence (lowest to highest)
+OrExpr: Box<Expr> = {
+    <e1:OrExpr> "||" <e2:AndExpr> => Box::new(Expr::BinOp(BinOp::Or, e1, e2)),
+    AndExpr,
+};
+
+AndExpr: Box<Expr> = {
+    <e1:AndExpr> "&&" <e2:EqExpr> => Box::new(Expr::BinOp(BinOp::And, e1, e2)),
+    EqExpr,
+};
+
+EqExpr: Box<Expr> = {
+    <e1:EqExpr> "==" <e2:CmpExpr> => Box::new(Expr::BinOp(BinOp::Eq, e1, e2)),
+    <e1:EqExpr> "!=" <e2:CmpExpr> => Box::new(Expr::BinOp(BinOp::Neq, e1, e2)),
+    CmpExpr,
+};
+
+CmpExpr: Box<Expr> = {
+    <e1:CmpExpr> "<" <e2:AddExpr> => Box::new(Expr::BinOp(BinOp::Lt, e1, e2)),
+    <e1:CmpExpr> "<=" <e2:AddExpr> => Box::new(Expr::BinOp(BinOp::Leq, e1, e2)),
+    <e1:CmpExpr> ">" <e2:AddExpr> => Box::new(Expr::BinOp(BinOp::Gt, e1, e2)),
+    <e1:CmpExpr> ">=" <e2:AddExpr> => Box::new(Expr::BinOp(BinOp::Geq, e1, e2)),
+    AddExpr,
+};
+
+AddExpr: Box<Expr> = {
+    <e1:AddExpr> "+" <e2:MulExpr> => Box::new(Expr::BinOp(BinOp::Add, e1, e2)),
+    <e1:AddExpr> "-" <e2:MulExpr> => Box::new(Expr::BinOp(BinOp::Sub, e1, e2)),
+    MulExpr,
+};
+
+MulExpr: Box<Expr> = {
+    <e1:MulExpr> "*" <e2:UnaryOp> => Box::new(Expr::BinOp(BinOp::Mul, e1, e2)),
+    <e1:MulExpr> "/" <e2:UnaryOp> => Box::new(Expr::BinOp(BinOp::Div, e1, e2)),
+    UnaryOp,
+};
+
+UnaryOp: Box<Expr> = {
+    "-" <e:App> => Box::new(Expr::UnaryOp(UnaryOp::Neg, e)),
+    "!" <e:App> => Box::new(Expr::UnaryOp(UnaryOp::Not, e)),
+    App,
+};
+
+    // <e1:App> <e2:Factor> => Box::new(Expr::App(e1, e2)),
+App: Box<Expr> = {
+    <f:Factor> <args:Factor+> => {
+        let mut args_vec = Vec::new();
+        for arg in args {
+            args_vec.push(*arg);
+        }
+        Box::new(Expr::App(f, args_vec))
+    },
+    Factor,
+};
+
+Factor: Box<Expr> = {
+    <v:Ident> => Box::new(Expr::Var(v)),
+    <n:r"[0-9]+(\.[0-9]+)?([eE][+-]?[0-9]+)?"> => {
+        if n.contains('.') || n.contains('e') || n.contains('E') {
+            Box::new(Expr::Float(n.parse().unwrap()))
+        } else {
+            Box::new(Expr::Int(n.parse().unwrap()))
+        }
+    },
+    "true" => Box::new(Expr::Bool(true)),
+    "false" => Box::new(Expr::Bool(false)),
+    "(" <e:Expr> ":" <t:Type> ")" => Box::new(Expr::Ann(e, t)),
+    "(" <e:Expr> ")" => e,
+    "(" ")" => Box::new(Expr::Unit)
+
+};
+
+// Types
+pub Type: Box<Type> = {
+    ArrowType,
+};
+
+ArrowType: Box<Type> = {
+    <t1:AtomType> "->" <t2:ArrowType> => Box::new(Type::Arrow(t1, t2)),
+    AtomType,
+};
+
+AtomType: Box<Type> = {
+    <v:Ident> => Box::new(Type::Var(v)),
+    "Int" => Box::new(Type::Int),
+    "Bool" => Box::new(Type::Bool),
+    "(" <t:Type> ")" => t,
+};
+
+Ident: String = <s:r"[a-zA-Z_][a-zA-Z0-9_]*"> => s.to_string();
