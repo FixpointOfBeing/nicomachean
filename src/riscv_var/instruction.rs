@@ -1,8 +1,6 @@
-use crate::riscv::rv64imfd_imm::{
-    Imm12, Imm32LowZeroBits12, Shamt5, Shamt6,
-};
+use crate::riscv::rv64imfd_imm::{Imm12, Imm32LowZeroBits12, Shamt5, Shamt6};
 use crate::riscv::rv64imfd_instr::Rm;
-use crate::riscv_var::label::Label;
+use crate::riscv::Label;
 use crate::riscv_var::location::{RvVarLocation, ra, zero};
 use std::collections::HashSet;
 use std::{fmt, i64};
@@ -38,17 +36,9 @@ pub enum RvVarInstr {
     /// 有符号乘法（取高 64 位）：rd = (rs1 *s rs2) >> 64
     Mulh { rd: RvVarLocation, rs1: RvVarLocation, rs2: RvVarLocation },
     /// 无符号乘法（取高 64 位）：rd = (rs1 *u rs2) >> 64
-    Mulhu {
-        rd: RvVarLocation,
-        rs1: RvVarLocation,
-        rs2: RvVarLocation,
-    },
+    Mulhu { rd: RvVarLocation, rs1: RvVarLocation, rs2: RvVarLocation },
     /// 有符号乘无符号（取高 64 位）：rd = (rs1 *s rs2_u) >> 64
-    Mulhsu {
-        rd: RvVarLocation,
-        rs1: RvVarLocation,
-        rs2: RvVarLocation,
-    },
+    Mulhsu { rd: RvVarLocation, rs1: RvVarLocation, rs2: RvVarLocation },
     /// 有符号除法（向零截断）：rd = rs1 /s rs2；除零时 rd = -1，溢出（MIN / -1）时 rd = MIN
     Div { rd: RvVarLocation, rs1: RvVarLocation, rs2: RvVarLocation },
     /// 无符号除法：rd = rs1 /u rs2；除零时 rd = 2^64 - 1
@@ -76,19 +66,11 @@ pub enum RvVarInstr {
     /// 32 位有符号除法（向零截断），结果按 32 位符号扩展；除零时 rd = -1，溢出时 rd = sext32(INT32_MIN)
     Divw { rd: RvVarLocation, rs1: RvVarLocation, rs2: RvVarLocation },
     /// 32 位无符号除法，结果按 32 位符号扩展；除零时 rd = 2^32 - 1
-    Divuw {
-        rd: RvVarLocation,
-        rs1: RvVarLocation,
-        rs2: RvVarLocation,
-    },
+    Divuw { rd: RvVarLocation, rs1: RvVarLocation, rs2: RvVarLocation },
     /// 32 位有符号取余，结果按 32 位符号扩展；除零时 rd = rs1，溢出时 rd = 0
     Remw { rd: RvVarLocation, rs1: RvVarLocation, rs2: RvVarLocation },
     /// 32 位无符号取余，结果按 32 位符号扩展；除零时 rd = rs1
-    Remuw {
-        rd: RvVarLocation,
-        rs1: RvVarLocation,
-        rs2: RvVarLocation,
-    },
+    Remuw { rd: RvVarLocation, rs1: RvVarLocation, rs2: RvVarLocation },
 
     // I-type
     /// 加立即数（12 位符号扩展）：rd = rs1 + sext(imm)
@@ -179,61 +161,21 @@ pub enum RvVarInstr {
     /// 带变量操作数的 RISC-V 浮点指令（F/D 扩展）
     // 浮点算术（带舍入模式）
     /// 单精度浮点加法：rd = rs1 + rs2（按 rm 舍入）
-    FaddS {
-        rd: RvVarLocation,
-        rs1: RvVarLocation,
-        rs2: RvVarLocation,
-        rm: Rm,
-    },
+    FaddS { rd: RvVarLocation, rs1: RvVarLocation, rs2: RvVarLocation, rm: Rm },
     /// 双精度浮点加法：rd = rs1 + rs2（按 rm 舍入）
-    FaddD {
-        rd: RvVarLocation,
-        rs1: RvVarLocation,
-        rs2: RvVarLocation,
-        rm: Rm,
-    },
+    FaddD { rd: RvVarLocation, rs1: RvVarLocation, rs2: RvVarLocation, rm: Rm },
     /// 单精度浮点减法：rd = rs1 - rs2（按 rm 舍入）
-    FsubS {
-        rd: RvVarLocation,
-        rs1: RvVarLocation,
-        rs2: RvVarLocation,
-        rm: Rm,
-    },
+    FsubS { rd: RvVarLocation, rs1: RvVarLocation, rs2: RvVarLocation, rm: Rm },
     /// 双精度浮点减法：rd = rs1 - rs2（按 rm 舍入）
-    FsubD {
-        rd: RvVarLocation,
-        rs1: RvVarLocation,
-        rs2: RvVarLocation,
-        rm: Rm,
-    },
+    FsubD { rd: RvVarLocation, rs1: RvVarLocation, rs2: RvVarLocation, rm: Rm },
     /// 单精度浮点乘法：rd = rs1 × rs2（按 rm 舍入）
-    FmulS {
-        rd: RvVarLocation,
-        rs1: RvVarLocation,
-        rs2: RvVarLocation,
-        rm: Rm,
-    },
+    FmulS { rd: RvVarLocation, rs1: RvVarLocation, rs2: RvVarLocation, rm: Rm },
     /// 双精度浮点乘法：rd = rs1 × rs2（按 rm 舍入）
-    FmulD {
-        rd: RvVarLocation,
-        rs1: RvVarLocation,
-        rs2: RvVarLocation,
-        rm: Rm,
-    },
+    FmulD { rd: RvVarLocation, rs1: RvVarLocation, rs2: RvVarLocation, rm: Rm },
     /// 单精度浮点除法：rd = rs1 / rs2（按 rm 舍入）
-    FdivS {
-        rd: RvVarLocation,
-        rs1: RvVarLocation,
-        rs2: RvVarLocation,
-        rm: Rm,
-    },
+    FdivS { rd: RvVarLocation, rs1: RvVarLocation, rs2: RvVarLocation, rm: Rm },
     /// 双精度浮点除法：rd = rs1 / rs2（按 rm 舍入）
-    FdivD {
-        rd: RvVarLocation,
-        rs1: RvVarLocation,
-        rs2: RvVarLocation,
-        rm: Rm,
-    },
+    FdivD { rd: RvVarLocation, rs1: RvVarLocation, rs2: RvVarLocation, rm: Rm },
     /// 单精度浮点平方根：rd = √rs1（按 rm 舍入）
     FsqrtS { rd: RvVarLocation, rs1: RvVarLocation, rm: Rm },
     /// 双精度浮点平方根：rd = √rs1（按 rm 舍入）
@@ -241,67 +183,27 @@ pub enum RvVarInstr {
 
     // 符号注入/拷贝（无舍入）
     /// 单精度拷贝符号位：rd = rs1 的绝对值与 rs2 的符号位组合
-    FsgnjS {
-        rd: RvVarLocation,
-        rs1: RvVarLocation,
-        rs2: RvVarLocation,
-    },
+    FsgnjS { rd: RvVarLocation, rs1: RvVarLocation, rs2: RvVarLocation },
     /// 双精度拷贝符号位：rd = rs1 的绝对值与 rs2 的符号位组合
-    FsgnjD {
-        rd: RvVarLocation,
-        rs1: RvVarLocation,
-        rs2: RvVarLocation,
-    },
+    FsgnjD { rd: RvVarLocation, rs1: RvVarLocation, rs2: RvVarLocation },
     /// 单精度拷贝相反符号位：rd = rs1 的绝对值与 ~rs2 的符号位组合
-    FsgnjnS {
-        rd: RvVarLocation,
-        rs1: RvVarLocation,
-        rs2: RvVarLocation,
-    },
+    FsgnjnS { rd: RvVarLocation, rs1: RvVarLocation, rs2: RvVarLocation },
     /// 双精度拷贝相反符号位：rd = rs1 的绝对值与 ~rs2 的符号位组合
-    FsgnjnD {
-        rd: RvVarLocation,
-        rs1: RvVarLocation,
-        rs2: RvVarLocation,
-    },
+    FsgnjnD { rd: RvVarLocation, rs1: RvVarLocation, rs2: RvVarLocation },
     /// 单精度符号位异或：rd = rs1 的绝对值与 (rs1 符号位 xor rs2 符号位) 组合
-    FsgnjxS {
-        rd: RvVarLocation,
-        rs1: RvVarLocation,
-        rs2: RvVarLocation,
-    },
+    FsgnjxS { rd: RvVarLocation, rs1: RvVarLocation, rs2: RvVarLocation },
     /// 双精度符号位异或：rd = rs1 的绝对值与 (rs1 符号位 xor rs2 符号位) 组合
-    FsgnjxD {
-        rd: RvVarLocation,
-        rs1: RvVarLocation,
-        rs2: RvVarLocation,
-    },
+    FsgnjxD { rd: RvVarLocation, rs1: RvVarLocation, rs2: RvVarLocation },
 
     // 取最小值/最大值（无舍入，遵循 IEEE-754 2019 语义）
     /// 单精度取最小值：rd = min(rs1, rs2)
-    FminS {
-        rd: RvVarLocation,
-        rs1: RvVarLocation,
-        rs2: RvVarLocation,
-    },
+    FminS { rd: RvVarLocation, rs1: RvVarLocation, rs2: RvVarLocation },
     /// 双精度取最小值：rd = min(rs1, rs2)
-    FminD {
-        rd: RvVarLocation,
-        rs1: RvVarLocation,
-        rs2: RvVarLocation,
-    },
+    FminD { rd: RvVarLocation, rs1: RvVarLocation, rs2: RvVarLocation },
     /// 单精度取最大值：rd = max(rs1, rs2)
-    FmaxS {
-        rd: RvVarLocation,
-        rs1: RvVarLocation,
-        rs2: RvVarLocation,
-    },
+    FmaxS { rd: RvVarLocation, rs1: RvVarLocation, rs2: RvVarLocation },
     /// 双精度取最大值：rd = max(rs1, rs2)
-    FmaxD {
-        rd: RvVarLocation,
-        rs1: RvVarLocation,
-        rs2: RvVarLocation,
-    },
+    FmaxD { rd: RvVarLocation, rs1: RvVarLocation, rs2: RvVarLocation },
 
     // 浮点比较（结果写入整数寄存器）
     /// 单精度浮点相等比较：rs1 == rs2 时 rd = 1，否则 rd = 0
@@ -355,69 +257,21 @@ pub enum RvVarInstr {
 
     // 融合乘加（R4-type，带舍入模式）
     /// 单精度融合乘加：rd = rs1×rs2 + rs3（按 rm 舍入）
-    FmaddS {
-        rd: RvVarLocation,
-        rs1: RvVarLocation,
-        rs2: RvVarLocation,
-        rs3: RvVarLocation,
-        rm: Rm,
-    },
+    FmaddS { rd: RvVarLocation, rs1: RvVarLocation, rs2: RvVarLocation, rs3: RvVarLocation, rm: Rm },
     /// 单精度融合乘减：rd = rs1×rs2 - rs3（按 rm 舍入）
-    FmsubS {
-        rd: RvVarLocation,
-        rs1: RvVarLocation,
-        rs2: RvVarLocation,
-        rs3: RvVarLocation,
-        rm: Rm,
-    },
+    FmsubS { rd: RvVarLocation, rs1: RvVarLocation, rs2: RvVarLocation, rs3: RvVarLocation, rm: Rm },
     /// 单精度融合负乘加：rd = -(rs1×rs2) + rs3（按 rm 舍入）
-    FnmsubS {
-        rd: RvVarLocation,
-        rs1: RvVarLocation,
-        rs2: RvVarLocation,
-        rs3: RvVarLocation,
-        rm: Rm,
-    },
+    FnmsubS { rd: RvVarLocation, rs1: RvVarLocation, rs2: RvVarLocation, rs3: RvVarLocation, rm: Rm },
     /// 单精度融合负乘减：rd = -(rs1×rs2) - rs3（按 rm 舍入）
-    FnmaddS {
-        rd: RvVarLocation,
-        rs1: RvVarLocation,
-        rs2: RvVarLocation,
-        rs3: RvVarLocation,
-        rm: Rm,
-    },
+    FnmaddS { rd: RvVarLocation, rs1: RvVarLocation, rs2: RvVarLocation, rs3: RvVarLocation, rm: Rm },
     /// 双精度融合乘加：rd = rs1×rs2 + rs3（按 rm 舍入）
-    FmaddD {
-        rd: RvVarLocation,
-        rs1: RvVarLocation,
-        rs2: RvVarLocation,
-        rs3: RvVarLocation,
-        rm: Rm,
-    },
+    FmaddD { rd: RvVarLocation, rs1: RvVarLocation, rs2: RvVarLocation, rs3: RvVarLocation, rm: Rm },
     /// 双精度融合乘减：rd = rs1×rs2 - rs3（按 rm 舍入）
-    FmsubD {
-        rd: RvVarLocation,
-        rs1: RvVarLocation,
-        rs2: RvVarLocation,
-        rs3: RvVarLocation,
-        rm: Rm,
-    },
+    FmsubD { rd: RvVarLocation, rs1: RvVarLocation, rs2: RvVarLocation, rs3: RvVarLocation, rm: Rm },
     /// 双精度融合负乘加：rd = -(rs1×rs2) + rs3（按 rm 舍入）
-    FnmsubD {
-        rd: RvVarLocation,
-        rs1: RvVarLocation,
-        rs2: RvVarLocation,
-        rs3: RvVarLocation,
-        rm: Rm,
-    },
+    FnmsubD { rd: RvVarLocation, rs1: RvVarLocation, rs2: RvVarLocation, rs3: RvVarLocation, rm: Rm },
     /// 双精度融合负乘减：rd = -(rs1×rs2) - rs3（按 rm 舍入）
-    FnmaddD {
-        rd: RvVarLocation,
-        rs1: RvVarLocation,
-        rs2: RvVarLocation,
-        rs3: RvVarLocation,
-        rm: Rm,
-    },
+    FnmaddD { rd: RvVarLocation, rs1: RvVarLocation, rs2: RvVarLocation, rs3: RvVarLocation, rm: Rm },
 
     // 浮点分类（结果写入整数寄存器）
     /// 单精度浮点分类：rd = 指示 rs1 类型的位掩码
@@ -458,11 +312,7 @@ pub fn li(rd: RvVarLocation, imm: i64) -> Vec<RvVarInstr> {
     let mut instrs = Vec::new();
 
     if -2048 <= imm && imm <= 2047 {
-        instrs.push(RvVarInstr::Addi {
-            rd: rd,
-            rs1: zero(),
-            imm: Imm12::from_i16(imm as i16),
-        });
+        instrs.push(RvVarInstr::Addi { rd: rd, rs1: zero(), imm: Imm12::from_i16(imm as i16) });
         return instrs;
     }
 
@@ -470,16 +320,9 @@ pub fn li(rd: RvVarLocation, imm: i64) -> Vec<RvVarInstr> {
         let imm32 = imm as i32;
         let hi = ((imm + 0x800) >> 12) & 0xFFFFF;
         let lo = ((imm32 & 0xFFF) ^ 0x800) - 0x800;
-        instrs.push(RvVarInstr::Lui {
-            rd: rd.clone(),
-            imm: Imm32LowZeroBits12::from_i32((hi as i32) << 12),
-        });
+        instrs.push(RvVarInstr::Lui { rd: rd.clone(), imm: Imm32LowZeroBits12::from_i32((hi as i32) << 12) });
         if lo != 0 {
-            instrs.push(RvVarInstr::Addiw {
-                rd: rd.clone(),
-                rs1: rd.clone(),
-                imm: Imm12::from_i16(lo as i16),
-            });
+            instrs.push(RvVarInstr::Addiw { rd: rd.clone(), rs1: rd.clone(), imm: Imm12::from_i16(lo as i16) });
         }
         return instrs;
     }
@@ -508,52 +351,21 @@ pub fn li(rd: RvVarLocation, imm: i64) -> Vec<RvVarInstr> {
     }
     let top = ((((x & 0xFFFFF) as i64) + carry) & 0xFFFFF) as i32;
 
-    instrs.push(RvVarInstr::Lui {
-        rd: rd.clone(),
-        imm: Imm32LowZeroBits12::from_i32(top << 12),
-    });
+    instrs.push(RvVarInstr::Lui { rd: rd.clone(), imm: Imm32LowZeroBits12::from_i32(top << 12) });
     if chunks[2] != 0 {
-        instrs.push(RvVarInstr::Addi {
-            rd: rd.clone(),
-            rs1: rd.clone(),
-            imm: Imm12::from_i16(chunks[2]),
-        });
+        instrs.push(RvVarInstr::Addi { rd: rd.clone(), rs1: rd.clone(), imm: Imm12::from_i16(chunks[2]) });
     }
-    instrs.push(RvVarInstr::Slli {
-        rd: rd.clone(),
-        rs1: rd.clone(),
-        shamt: Shamt6::from_u8(12),
-    });
+    instrs.push(RvVarInstr::Slli { rd: rd.clone(), rs1: rd.clone(), shamt: Shamt6::from_u8(12) });
     if chunks[1] != 0 {
-        instrs.push(RvVarInstr::Addi {
-            rd: rd.clone(),
-            rs1: rd.clone(),
-            imm: Imm12::from_i16(chunks[1]),
-        });
+        instrs.push(RvVarInstr::Addi { rd: rd.clone(), rs1: rd.clone(), imm: Imm12::from_i16(chunks[1]) });
     }
-    instrs.push(RvVarInstr::Slli {
-        rd: rd.clone(),
-        rs1: rd.clone(),
-        shamt: Shamt6::from_u8(12),
-    });
+    instrs.push(RvVarInstr::Slli { rd: rd.clone(), rs1: rd.clone(), shamt: Shamt6::from_u8(12) });
     if chunks[0] != 0 {
-        instrs.push(RvVarInstr::Addi {
-            rd: rd.clone(),
-            rs1: rd.clone(),
-            imm: Imm12::from_i16(chunks[0]),
-        });
+        instrs.push(RvVarInstr::Addi { rd: rd.clone(), rs1: rd.clone(), imm: Imm12::from_i16(chunks[0]) });
     }
-    instrs.push(RvVarInstr::Slli {
-        rd: rd.clone(),
-        rs1: rd.clone(),
-        shamt: Shamt6::from_u8(8),
-    });
+    instrs.push(RvVarInstr::Slli { rd: rd.clone(), rs1: rd.clone(), shamt: Shamt6::from_u8(8) });
     if c0 != 0 {
-        instrs.push(RvVarInstr::Addi {
-            rd: rd.clone(),
-            rs1: rd.clone(),
-            imm: Imm12::from_i16(c0 as i16),
-        });
+        instrs.push(RvVarInstr::Addi { rd: rd.clone(), rs1: rd.clone(), imm: Imm12::from_i16(c0 as i16) });
     }
     instrs
 }
@@ -568,11 +380,7 @@ pub fn not(rd: RvVarLocation, rs: RvVarLocation) -> RvVarInstr {
 
 /// 伪指令：空操作，展开为 addi x0, x0, 0
 pub fn nop() -> RvVarInstr {
-    RvVarInstr::Addi {
-        rd: zero(),
-        rs1: zero(),
-        imm: Imm12::from_i16(0),
-    }
+    RvVarInstr::Addi { rd: zero(), rs1: zero(), imm: Imm12::from_i16(0) }
 }
 
 /// 伪指令：取负 rd = -rs，展开为 sub rd, x0, rs
@@ -647,11 +455,7 @@ pub fn jr(rs: RvVarLocation) -> RvVarInstr {
 
 /// 伪指令：返回，展开为 jalr x0, 0(ra)
 pub fn ret() -> RvVarInstr {
-    RvVarInstr::Jalr {
-        rd: zero(),
-        rs1: ra(),
-        imm: Imm12::from_i16(0),
-    }
+    RvVarInstr::Jalr { rd: zero(), rs1: ra(), imm: Imm12::from_i16(0) }
 }
 
 /// 伪指令：尾调用，展开为 jal x0, label
@@ -880,11 +684,7 @@ impl fmt::Display for RvVarInstr {
             },
 
             Self::Lui { rd, imm } => {
-                write!(
-                    f,
-                    "lui {rd}, 0x{:x}",
-                    (imm.to_i32() >> 12) & 0xFFFFF
-                )
+                write!(f, "lui {rd}, 0x{:x}", (imm.to_i32() >> 12) & 0xFFFFF)
             },
 
             Self::Auipc { rd, imm } => {
@@ -1675,6 +1475,407 @@ impl RvVarInstr {
         }
         sources
     }
+
+    /// 按位置重建指令：对 dest 位置应用 `map_dest`，对每个 source 位置应用 `map_src`。
+    /// 立即数、移位量、舍入模式与标签原样保留。
+    pub fn map_operands(
+        self,
+        map_dest: &mut impl FnMut(RvVarLocation) -> RvVarLocation,
+        map_src: &mut impl FnMut(RvVarLocation) -> RvVarLocation,
+    ) -> RvVarInstr {
+        match self {
+            RvVarInstr::Add { rd, rs1, rs2 } => {
+                RvVarInstr::Add { rd: map_dest(rd), rs1: map_src(rs1), rs2: map_src(rs2) }
+            },
+            RvVarInstr::Sub { rd, rs1, rs2 } => {
+                RvVarInstr::Sub { rd: map_dest(rd), rs1: map_src(rs1), rs2: map_src(rs2) }
+            },
+            RvVarInstr::Sll { rd, rs1, rs2 } => {
+                RvVarInstr::Sll { rd: map_dest(rd), rs1: map_src(rs1), rs2: map_src(rs2) }
+            },
+            RvVarInstr::Slt { rd, rs1, rs2 } => {
+                RvVarInstr::Slt { rd: map_dest(rd), rs1: map_src(rs1), rs2: map_src(rs2) }
+            },
+            RvVarInstr::Sltu { rd, rs1, rs2 } => {
+                RvVarInstr::Sltu { rd: map_dest(rd), rs1: map_src(rs1), rs2: map_src(rs2) }
+            },
+            RvVarInstr::Xor { rd, rs1, rs2 } => {
+                RvVarInstr::Xor { rd: map_dest(rd), rs1: map_src(rs1), rs2: map_src(rs2) }
+            },
+            RvVarInstr::Srl { rd, rs1, rs2 } => {
+                RvVarInstr::Srl { rd: map_dest(rd), rs1: map_src(rs1), rs2: map_src(rs2) }
+            },
+            RvVarInstr::Sra { rd, rs1, rs2 } => {
+                RvVarInstr::Sra { rd: map_dest(rd), rs1: map_src(rs1), rs2: map_src(rs2) }
+            },
+            RvVarInstr::Or { rd, rs1, rs2 } => {
+                RvVarInstr::Or { rd: map_dest(rd), rs1: map_src(rs1), rs2: map_src(rs2) }
+            },
+            RvVarInstr::And { rd, rs1, rs2 } => {
+                RvVarInstr::And { rd: map_dest(rd), rs1: map_src(rs1), rs2: map_src(rs2) }
+            },
+            RvVarInstr::Mul { rd, rs1, rs2 } => {
+                RvVarInstr::Mul { rd: map_dest(rd), rs1: map_src(rs1), rs2: map_src(rs2) }
+            },
+            RvVarInstr::Mulh { rd, rs1, rs2 } => {
+                RvVarInstr::Mulh { rd: map_dest(rd), rs1: map_src(rs1), rs2: map_src(rs2) }
+            },
+            RvVarInstr::Mulhu { rd, rs1, rs2 } => {
+                RvVarInstr::Mulhu { rd: map_dest(rd), rs1: map_src(rs1), rs2: map_src(rs2) }
+            },
+            RvVarInstr::Mulhsu { rd, rs1, rs2 } => {
+                RvVarInstr::Mulhsu { rd: map_dest(rd), rs1: map_src(rs1), rs2: map_src(rs2) }
+            },
+            RvVarInstr::Div { rd, rs1, rs2 } => {
+                RvVarInstr::Div { rd: map_dest(rd), rs1: map_src(rs1), rs2: map_src(rs2) }
+            },
+            RvVarInstr::Divu { rd, rs1, rs2 } => {
+                RvVarInstr::Divu { rd: map_dest(rd), rs1: map_src(rs1), rs2: map_src(rs2) }
+            },
+            RvVarInstr::Rem { rd, rs1, rs2 } => {
+                RvVarInstr::Rem { rd: map_dest(rd), rs1: map_src(rs1), rs2: map_src(rs2) }
+            },
+            RvVarInstr::Remu { rd, rs1, rs2 } => {
+                RvVarInstr::Remu { rd: map_dest(rd), rs1: map_src(rs1), rs2: map_src(rs2) }
+            },
+            RvVarInstr::Addw { rd, rs1, rs2 } => {
+                RvVarInstr::Addw { rd: map_dest(rd), rs1: map_src(rs1), rs2: map_src(rs2) }
+            },
+            RvVarInstr::Subw { rd, rs1, rs2 } => {
+                RvVarInstr::Subw { rd: map_dest(rd), rs1: map_src(rs1), rs2: map_src(rs2) }
+            },
+            RvVarInstr::Sllw { rd, rs1, rs2 } => {
+                RvVarInstr::Sllw { rd: map_dest(rd), rs1: map_src(rs1), rs2: map_src(rs2) }
+            },
+            RvVarInstr::Srlw { rd, rs1, rs2 } => {
+                RvVarInstr::Srlw { rd: map_dest(rd), rs1: map_src(rs1), rs2: map_src(rs2) }
+            },
+            RvVarInstr::Sraw { rd, rs1, rs2 } => {
+                RvVarInstr::Sraw { rd: map_dest(rd), rs1: map_src(rs1), rs2: map_src(rs2) }
+            },
+            RvVarInstr::Mulw { rd, rs1, rs2 } => {
+                RvVarInstr::Mulw { rd: map_dest(rd), rs1: map_src(rs1), rs2: map_src(rs2) }
+            },
+            RvVarInstr::Divw { rd, rs1, rs2 } => {
+                RvVarInstr::Divw { rd: map_dest(rd), rs1: map_src(rs1), rs2: map_src(rs2) }
+            },
+            RvVarInstr::Divuw { rd, rs1, rs2 } => {
+                RvVarInstr::Divuw { rd: map_dest(rd), rs1: map_src(rs1), rs2: map_src(rs2) }
+            },
+            RvVarInstr::Remw { rd, rs1, rs2 } => {
+                RvVarInstr::Remw { rd: map_dest(rd), rs1: map_src(rs1), rs2: map_src(rs2) }
+            },
+            RvVarInstr::Remuw { rd, rs1, rs2 } => {
+                RvVarInstr::Remuw { rd: map_dest(rd), rs1: map_src(rs1), rs2: map_src(rs2) }
+            },
+            RvVarInstr::Addi { rd, rs1, imm } => {
+                RvVarInstr::Addi { rd: map_dest(rd), rs1: map_src(rs1), imm: imm.clone() }
+            },
+            RvVarInstr::Slti { rd, rs1, imm } => {
+                RvVarInstr::Slti { rd: map_dest(rd), rs1: map_src(rs1), imm: imm.clone() }
+            },
+            RvVarInstr::Sltiu { rd, rs1, imm } => {
+                RvVarInstr::Sltiu { rd: map_dest(rd), rs1: map_src(rs1), imm: imm.clone() }
+            },
+            RvVarInstr::Xori { rd, rs1, imm } => {
+                RvVarInstr::Xori { rd: map_dest(rd), rs1: map_src(rs1), imm: imm.clone() }
+            },
+            RvVarInstr::Ori { rd, rs1, imm } => {
+                RvVarInstr::Ori { rd: map_dest(rd), rs1: map_src(rs1), imm: imm.clone() }
+            },
+            RvVarInstr::Andi { rd, rs1, imm } => {
+                RvVarInstr::Andi { rd: map_dest(rd), rs1: map_src(rs1), imm: imm.clone() }
+            },
+            RvVarInstr::Slli { rd, rs1, shamt } => {
+                RvVarInstr::Slli { rd: map_dest(rd), rs1: map_src(rs1), shamt: shamt.clone() }
+            },
+            RvVarInstr::Srli { rd, rs1, shamt } => {
+                RvVarInstr::Srli { rd: map_dest(rd), rs1: map_src(rs1), shamt: shamt.clone() }
+            },
+            RvVarInstr::Srai { rd, rs1, shamt } => {
+                RvVarInstr::Srai { rd: map_dest(rd), rs1: map_src(rs1), shamt: shamt.clone() }
+            },
+            RvVarInstr::Addiw { rd, rs1, imm } => {
+                RvVarInstr::Addiw { rd: map_dest(rd), rs1: map_src(rs1), imm: imm.clone() }
+            },
+            RvVarInstr::Slliw { rd, rs1, shamt } => {
+                RvVarInstr::Slliw { rd: map_dest(rd), rs1: map_src(rs1), shamt: shamt.clone() }
+            },
+            RvVarInstr::Srliw { rd, rs1, shamt } => {
+                RvVarInstr::Srliw { rd: map_dest(rd), rs1: map_src(rs1), shamt: shamt.clone() }
+            },
+            RvVarInstr::Sraiw { rd, rs1, shamt } => {
+                RvVarInstr::Sraiw { rd: map_dest(rd), rs1: map_src(rs1), shamt: shamt.clone() }
+            },
+            RvVarInstr::Lb { rd, rs1, imm } => {
+                RvVarInstr::Lb { rd: map_dest(rd), rs1: map_src(rs1), imm: imm.clone() }
+            },
+            RvVarInstr::Lh { rd, rs1, imm } => {
+                RvVarInstr::Lh { rd: map_dest(rd), rs1: map_src(rs1), imm: imm.clone() }
+            },
+            RvVarInstr::Lw { rd, rs1, imm } => {
+                RvVarInstr::Lw { rd: map_dest(rd), rs1: map_src(rs1), imm: imm.clone() }
+            },
+            RvVarInstr::Ld { rd, rs1, imm } => {
+                RvVarInstr::Ld { rd: map_dest(rd), rs1: map_src(rs1), imm: imm.clone() }
+            },
+            RvVarInstr::Lbu { rd, rs1, imm } => {
+                RvVarInstr::Lbu { rd: map_dest(rd), rs1: map_src(rs1), imm: imm.clone() }
+            },
+            RvVarInstr::Lhu { rd, rs1, imm } => {
+                RvVarInstr::Lhu { rd: map_dest(rd), rs1: map_src(rs1), imm: imm.clone() }
+            },
+            RvVarInstr::Lwu { rd, rs1, imm } => {
+                RvVarInstr::Lwu { rd: map_dest(rd), rs1: map_src(rs1), imm: imm.clone() }
+            },
+            RvVarInstr::Jalr { rd, rs1, imm } => {
+                RvVarInstr::Jalr { rd: map_dest(rd), rs1: map_src(rs1), imm: imm.clone() }
+            },
+            RvVarInstr::Sb { rs2, rs1, imm } => {
+                RvVarInstr::Sb { rs2: map_src(rs2), rs1: map_src(rs1), imm: imm.clone() }
+            },
+            RvVarInstr::Sh { rs2, rs1, imm } => {
+                RvVarInstr::Sh { rs2: map_src(rs2), rs1: map_src(rs1), imm: imm.clone() }
+            },
+            RvVarInstr::Sw { rs2, rs1, imm } => {
+                RvVarInstr::Sw { rs2: map_src(rs2), rs1: map_src(rs1), imm: imm.clone() }
+            },
+            RvVarInstr::Sd { rs2, rs1, imm } => {
+                RvVarInstr::Sd { rs2: map_src(rs2), rs1: map_src(rs1), imm: imm.clone() }
+            },
+            RvVarInstr::Beq { rs1, rs2, label } => {
+                RvVarInstr::Beq { rs1: map_src(rs1), rs2: map_src(rs2), label: label.clone() }
+            },
+            RvVarInstr::Bne { rs1, rs2, label } => {
+                RvVarInstr::Bne { rs1: map_src(rs1), rs2: map_src(rs2), label: label.clone() }
+            },
+            RvVarInstr::Blt { rs1, rs2, label } => {
+                RvVarInstr::Blt { rs1: map_src(rs1), rs2: map_src(rs2), label: label.clone() }
+            },
+            RvVarInstr::Bge { rs1, rs2, label } => {
+                RvVarInstr::Bge { rs1: map_src(rs1), rs2: map_src(rs2), label: label.clone() }
+            },
+            RvVarInstr::Bltu { rs1, rs2, label } => {
+                RvVarInstr::Bltu { rs1: map_src(rs1), rs2: map_src(rs2), label: label.clone() }
+            },
+            RvVarInstr::Bgeu { rs1, rs2, label } => {
+                RvVarInstr::Bgeu { rs1: map_src(rs1), rs2: map_src(rs2), label: label.clone() }
+            },
+            RvVarInstr::Lui { rd, imm } => RvVarInstr::Lui { rd: map_dest(rd), imm: imm.clone() },
+            RvVarInstr::Auipc { rd, imm } => RvVarInstr::Auipc { rd: map_dest(rd), imm: imm.clone() },
+            RvVarInstr::Jal { rd, label } => RvVarInstr::Jal { rd: map_dest(rd), label: label.clone() },
+            RvVarInstr::FaddS { rd, rs1, rs2, rm } => {
+                RvVarInstr::FaddS { rd: map_dest(rd), rs1: map_src(rs1), rs2: map_src(rs2), rm: rm.clone() }
+            },
+            RvVarInstr::FaddD { rd, rs1, rs2, rm } => {
+                RvVarInstr::FaddD { rd: map_dest(rd), rs1: map_src(rs1), rs2: map_src(rs2), rm: rm.clone() }
+            },
+            RvVarInstr::FsubS { rd, rs1, rs2, rm } => {
+                RvVarInstr::FsubS { rd: map_dest(rd), rs1: map_src(rs1), rs2: map_src(rs2), rm: rm.clone() }
+            },
+            RvVarInstr::FsubD { rd, rs1, rs2, rm } => {
+                RvVarInstr::FsubD { rd: map_dest(rd), rs1: map_src(rs1), rs2: map_src(rs2), rm: rm.clone() }
+            },
+            RvVarInstr::FmulS { rd, rs1, rs2, rm } => {
+                RvVarInstr::FmulS { rd: map_dest(rd), rs1: map_src(rs1), rs2: map_src(rs2), rm: rm.clone() }
+            },
+            RvVarInstr::FmulD { rd, rs1, rs2, rm } => {
+                RvVarInstr::FmulD { rd: map_dest(rd), rs1: map_src(rs1), rs2: map_src(rs2), rm: rm.clone() }
+            },
+            RvVarInstr::FdivS { rd, rs1, rs2, rm } => {
+                RvVarInstr::FdivS { rd: map_dest(rd), rs1: map_src(rs1), rs2: map_src(rs2), rm: rm.clone() }
+            },
+            RvVarInstr::FdivD { rd, rs1, rs2, rm } => {
+                RvVarInstr::FdivD { rd: map_dest(rd), rs1: map_src(rs1), rs2: map_src(rs2), rm: rm.clone() }
+            },
+            RvVarInstr::FsqrtS { rd, rs1, rm } => {
+                RvVarInstr::FsqrtS { rd: map_dest(rd), rs1: map_src(rs1), rm: rm.clone() }
+            },
+            RvVarInstr::FsqrtD { rd, rs1, rm } => {
+                RvVarInstr::FsqrtD { rd: map_dest(rd), rs1: map_src(rs1), rm: rm.clone() }
+            },
+            RvVarInstr::FsgnjS { rd, rs1, rs2 } => {
+                RvVarInstr::FsgnjS { rd: map_dest(rd), rs1: map_src(rs1), rs2: map_src(rs2) }
+            },
+            RvVarInstr::FsgnjD { rd, rs1, rs2 } => {
+                RvVarInstr::FsgnjD { rd: map_dest(rd), rs1: map_src(rs1), rs2: map_src(rs2) }
+            },
+            RvVarInstr::FsgnjnS { rd, rs1, rs2 } => {
+                RvVarInstr::FsgnjnS { rd: map_dest(rd), rs1: map_src(rs1), rs2: map_src(rs2) }
+            },
+            RvVarInstr::FsgnjnD { rd, rs1, rs2 } => {
+                RvVarInstr::FsgnjnD { rd: map_dest(rd), rs1: map_src(rs1), rs2: map_src(rs2) }
+            },
+            RvVarInstr::FsgnjxS { rd, rs1, rs2 } => {
+                RvVarInstr::FsgnjxS { rd: map_dest(rd), rs1: map_src(rs1), rs2: map_src(rs2) }
+            },
+            RvVarInstr::FsgnjxD { rd, rs1, rs2 } => {
+                RvVarInstr::FsgnjxD { rd: map_dest(rd), rs1: map_src(rs1), rs2: map_src(rs2) }
+            },
+            RvVarInstr::FminS { rd, rs1, rs2 } => {
+                RvVarInstr::FminS { rd: map_dest(rd), rs1: map_src(rs1), rs2: map_src(rs2) }
+            },
+            RvVarInstr::FminD { rd, rs1, rs2 } => {
+                RvVarInstr::FminD { rd: map_dest(rd), rs1: map_src(rs1), rs2: map_src(rs2) }
+            },
+            RvVarInstr::FmaxS { rd, rs1, rs2 } => {
+                RvVarInstr::FmaxS { rd: map_dest(rd), rs1: map_src(rs1), rs2: map_src(rs2) }
+            },
+            RvVarInstr::FmaxD { rd, rs1, rs2 } => {
+                RvVarInstr::FmaxD { rd: map_dest(rd), rs1: map_src(rs1), rs2: map_src(rs2) }
+            },
+            RvVarInstr::FeqS { rd, rs1, rs2 } => {
+                RvVarInstr::FeqS { rd: map_dest(rd), rs1: map_src(rs1), rs2: map_src(rs2) }
+            },
+            RvVarInstr::FeqD { rd, rs1, rs2 } => {
+                RvVarInstr::FeqD { rd: map_dest(rd), rs1: map_src(rs1), rs2: map_src(rs2) }
+            },
+            RvVarInstr::FltS { rd, rs1, rs2 } => {
+                RvVarInstr::FltS { rd: map_dest(rd), rs1: map_src(rs1), rs2: map_src(rs2) }
+            },
+            RvVarInstr::FltD { rd, rs1, rs2 } => {
+                RvVarInstr::FltD { rd: map_dest(rd), rs1: map_src(rs1), rs2: map_src(rs2) }
+            },
+            RvVarInstr::FleS { rd, rs1, rs2 } => {
+                RvVarInstr::FleS { rd: map_dest(rd), rs1: map_src(rs1), rs2: map_src(rs2) }
+            },
+            RvVarInstr::FleD { rd, rs1, rs2 } => {
+                RvVarInstr::FleD { rd: map_dest(rd), rs1: map_src(rs1), rs2: map_src(rs2) }
+            },
+            RvVarInstr::FmvXW { rd, rs1 } => RvVarInstr::FmvXW { rd: map_dest(rd), rs1: map_src(rs1) },
+            RvVarInstr::FmvWX { rd, rs1 } => RvVarInstr::FmvWX { rd: map_dest(rd), rs1: map_src(rs1) },
+            RvVarInstr::FmvXD { rd, rs1 } => RvVarInstr::FmvXD { rd: map_dest(rd), rs1: map_src(rs1) },
+            RvVarInstr::FmvDX { rd, rs1 } => RvVarInstr::FmvDX { rd: map_dest(rd), rs1: map_src(rs1) },
+            RvVarInstr::FcvtSW { rd, rs1 } => RvVarInstr::FcvtSW { rd: map_dest(rd), rs1: map_src(rs1) },
+            RvVarInstr::FcvtSWu { rd, rs1 } => RvVarInstr::FcvtSWu { rd: map_dest(rd), rs1: map_src(rs1) },
+            RvVarInstr::FcvtDW { rd, rs1 } => RvVarInstr::FcvtDW { rd: map_dest(rd), rs1: map_src(rs1) },
+            RvVarInstr::FcvtDWu { rd, rs1 } => RvVarInstr::FcvtDWu { rd: map_dest(rd), rs1: map_src(rs1) },
+            RvVarInstr::FcvtSD { rd, rs1 } => RvVarInstr::FcvtSD { rd: map_dest(rd), rs1: map_src(rs1) },
+            RvVarInstr::FcvtDS { rd, rs1 } => RvVarInstr::FcvtDS { rd: map_dest(rd), rs1: map_src(rs1) },
+            RvVarInstr::FcvtWS { rd, rs1, rm } => {
+                RvVarInstr::FcvtWS { rd: map_dest(rd), rs1: map_src(rs1), rm: rm.clone() }
+            },
+            RvVarInstr::FcvtWuS { rd, rs1, rm } => {
+                RvVarInstr::FcvtWuS { rd: map_dest(rd), rs1: map_src(rs1), rm: rm.clone() }
+            },
+            RvVarInstr::FcvtWD { rd, rs1, rm } => {
+                RvVarInstr::FcvtWD { rd: map_dest(rd), rs1: map_src(rs1), rm: rm.clone() }
+            },
+            RvVarInstr::FcvtWuD { rd, rs1, rm } => {
+                RvVarInstr::FcvtWuD { rd: map_dest(rd), rs1: map_src(rs1), rm: rm.clone() }
+            },
+            RvVarInstr::FmaddS { rd, rs1, rs2, rs3, rm } => {
+                RvVarInstr::FmaddS {
+                    rd: map_dest(rd),
+                    rs1: map_src(rs1),
+                    rs2: map_src(rs2),
+                    rs3: map_src(rs3),
+                    rm: rm.clone(),
+                }
+            },
+            RvVarInstr::FmsubS { rd, rs1, rs2, rs3, rm } => {
+                RvVarInstr::FmsubS {
+                    rd: map_dest(rd),
+                    rs1: map_src(rs1),
+                    rs2: map_src(rs2),
+                    rs3: map_src(rs3),
+                    rm: rm.clone(),
+                }
+            },
+            RvVarInstr::FnmsubS { rd, rs1, rs2, rs3, rm } => {
+                RvVarInstr::FnmsubS {
+                    rd: map_dest(rd),
+                    rs1: map_src(rs1),
+                    rs2: map_src(rs2),
+                    rs3: map_src(rs3),
+                    rm: rm.clone(),
+                }
+            },
+            RvVarInstr::FnmaddS { rd, rs1, rs2, rs3, rm } => {
+                RvVarInstr::FnmaddS {
+                    rd: map_dest(rd),
+                    rs1: map_src(rs1),
+                    rs2: map_src(rs2),
+                    rs3: map_src(rs3),
+                    rm: rm.clone(),
+                }
+            },
+            RvVarInstr::FmaddD { rd, rs1, rs2, rs3, rm } => {
+                RvVarInstr::FmaddD {
+                    rd: map_dest(rd),
+                    rs1: map_src(rs1),
+                    rs2: map_src(rs2),
+                    rs3: map_src(rs3),
+                    rm: rm.clone(),
+                }
+            },
+            RvVarInstr::FmsubD { rd, rs1, rs2, rs3, rm } => {
+                RvVarInstr::FmsubD {
+                    rd: map_dest(rd),
+                    rs1: map_src(rs1),
+                    rs2: map_src(rs2),
+                    rs3: map_src(rs3),
+                    rm: rm.clone(),
+                }
+            },
+            RvVarInstr::FnmsubD { rd, rs1, rs2, rs3, rm } => {
+                RvVarInstr::FnmsubD {
+                    rd: map_dest(rd),
+                    rs1: map_src(rs1),
+                    rs2: map_src(rs2),
+                    rs3: map_src(rs3),
+                    rm: rm.clone(),
+                }
+            },
+            RvVarInstr::FnmaddD { rd, rs1, rs2, rs3, rm } => {
+                RvVarInstr::FnmaddD {
+                    rd: map_dest(rd),
+                    rs1: map_src(rs1),
+                    rs2: map_src(rs2),
+                    rs3: map_src(rs3),
+                    rm: rm.clone(),
+                }
+            },
+            RvVarInstr::FclassS { rd, rs1 } => RvVarInstr::FclassS { rd: map_dest(rd), rs1: map_src(rs1) },
+            RvVarInstr::FclassD { rd, rs1 } => RvVarInstr::FclassD { rd: map_dest(rd), rs1: map_src(rs1) },
+            RvVarInstr::FcvtLS { rd, rs1, rm } => {
+                RvVarInstr::FcvtLS { rd: map_dest(rd), rs1: map_src(rs1), rm: rm.clone() }
+            },
+            RvVarInstr::FcvtLuS { rd, rs1, rm } => {
+                RvVarInstr::FcvtLuS { rd: map_dest(rd), rs1: map_src(rs1), rm: rm.clone() }
+            },
+            RvVarInstr::FcvtSL { rd, rs1, rm } => {
+                RvVarInstr::FcvtSL { rd: map_dest(rd), rs1: map_src(rs1), rm: rm.clone() }
+            },
+            RvVarInstr::FcvtSLu { rd, rs1, rm } => {
+                RvVarInstr::FcvtSLu { rd: map_dest(rd), rs1: map_src(rs1), rm: rm.clone() }
+            },
+            RvVarInstr::FcvtLD { rd, rs1, rm } => {
+                RvVarInstr::FcvtLD { rd: map_dest(rd), rs1: map_src(rs1), rm: rm.clone() }
+            },
+            RvVarInstr::FcvtLuD { rd, rs1, rm } => {
+                RvVarInstr::FcvtLuD { rd: map_dest(rd), rs1: map_src(rs1), rm: rm.clone() }
+            },
+            RvVarInstr::FcvtDL { rd, rs1, rm } => {
+                RvVarInstr::FcvtDL { rd: map_dest(rd), rs1: map_src(rs1), rm: rm.clone() }
+            },
+            RvVarInstr::FcvtDLu { rd, rs1, rm } => {
+                RvVarInstr::FcvtDLu { rd: map_dest(rd), rs1: map_src(rs1), rm: rm.clone() }
+            },
+            RvVarInstr::Flw { rd, rs1, imm } => {
+                RvVarInstr::Flw { rd: map_dest(rd), rs1: map_src(rs1), imm: imm.clone() }
+            },
+            RvVarInstr::Fld { rd, rs1, imm } => {
+                RvVarInstr::Fld { rd: map_dest(rd), rs1: map_src(rs1), imm: imm.clone() }
+            },
+            RvVarInstr::Fsw { rs2, rs1, imm } => {
+                RvVarInstr::Fsw { rs2: map_src(rs2), rs1: map_src(rs1), imm: imm.clone() }
+            },
+            RvVarInstr::Fsd { rs2, rs1, imm } => {
+                RvVarInstr::Fsd { rs2: map_src(rs2), rs1: map_src(rs1), imm: imm.clone() }
+            },
+        }
+    }
 }
 
 // todo
@@ -1687,18 +1888,11 @@ mod tests {
         (v << (64 - bits)) >> (64 - bits)
     }
 
-    fn lookup(
-        env: &[(RvVarLocation, i64)],
-        loc: &RvVarLocation,
-    ) -> i64 {
+    fn lookup(env: &[(RvVarLocation, i64)], loc: &RvVarLocation) -> i64 {
         env.iter().rev().find(|(l, _)| l == loc).unwrap().1
     }
 
-    fn store(
-        env: &mut Vec<(RvVarLocation, i64)>,
-        loc: &RvVarLocation,
-        v: i64,
-    ) {
+    fn store(env: &mut Vec<(RvVarLocation, i64)>, loc: &RvVarLocation, v: i64) {
         if let Some(pair) = env.iter_mut().find(|(l, _)| l == loc) {
             pair.1 = v;
         } else {
@@ -1711,13 +1905,11 @@ mod tests {
         for instr in instrs {
             match instr {
                 RvVarInstr::Addi { rd, rs1, imm } => {
-                    let v = lookup(&env, rs1)
-                        .wrapping_add(sext(imm.to_i16() as i64, 12));
+                    let v = lookup(&env, rs1).wrapping_add(sext(imm.to_i16() as i64, 12));
                     store(&mut env, rd, v);
                 },
                 RvVarInstr::Addiw { rd, rs1, imm } => {
-                    let v = lookup(&env, rs1)
-                        .wrapping_add(sext(imm.to_i16() as i64, 12));
+                    let v = lookup(&env, rs1).wrapping_add(sext(imm.to_i16() as i64, 12));
                     store(&mut env, rd, sext(v, 32));
                 },
                 RvVarInstr::Slli { rd, rs1, shamt } => {
@@ -1725,13 +1917,10 @@ mod tests {
                     store(&mut env, rd, v);
                 },
                 RvVarInstr::Lui { rd, imm } => {
-                    let v =
-                        sext((imm.to_i32() >> 12) as i64, 20) << 12;
+                    let v = sext((imm.to_i32() >> 12) as i64, 20) << 12;
                     store(&mut env, rd, v);
                 },
-                other => panic!(
-                    "unexpected instruction in li/mv: {other:?}"
-                ),
+                other => panic!("unexpected instruction in li/mv: {other:?}"),
             }
         }
         lookup(&env, dest)
@@ -1805,11 +1994,9 @@ mod tests {
             let instrs = li(var("rd".to_string()), imm);
             for instr in &instrs {
                 match instr {
-                    RvVarInstr::Addi { imm, .. }
-                    | RvVarInstr::Addiw { imm, .. } => {
+                    RvVarInstr::Addi { imm, .. } | RvVarInstr::Addiw { imm, .. } => {
                         assert!(
-                            (-2048..=2047)
-                                .contains(&(imm.to_i16() as i32)),
+                            (-2048..=2047).contains(&(imm.to_i16() as i32)),
                             "imm out of 12-bit range: {imm} in {instrs:?}"
                         );
                     },
@@ -1827,8 +2014,7 @@ mod tests {
         let mut env = vec![(src.clone(), 42)];
         match &instr {
             RvVarInstr::Addi { rd, rs1, imm } => {
-                let v = lookup(&env, rs1)
-                    .wrapping_add(sext(imm.to_i16() as i64, 12));
+                let v = lookup(&env, rs1).wrapping_add(sext(imm.to_i16() as i64, 12));
                 store(&mut env, rd, v);
             },
             other => {

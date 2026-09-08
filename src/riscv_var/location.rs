@@ -11,6 +11,7 @@ pub enum RvVarLocation {
     FVar(Ident),
     XReg(XReg),
     FReg(FReg),
+    StackSlot { offset: i32, size: u32 },
 }
 
 #[inline]
@@ -365,6 +366,7 @@ impl fmt::Display for RvVarLocation {
             RvVarLocation::FVar(name) => write!(f, "{}", name),
             RvVarLocation::FReg(reg) => write!(f, "{}", reg),
             RvVarLocation::Dummy(s) => write!(f, "${}", s),
+            RvVarLocation::StackSlot { offset, .. } => write!(f, "{}(sp)", offset)
         }
     }
 }

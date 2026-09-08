@@ -25,17 +25,11 @@ impl Module {
         self.functions.iter().find(|func| func.name == name)
     }
 
-    pub fn get_func_decl_by_name(
-        &self,
-        name: &str,
-    ) -> Option<&FunctionDeclaration> {
+    pub fn get_func_decl_by_name(&self, name: &str) -> Option<&FunctionDeclaration> {
         self.func_declarations.iter().find(|decl| decl.name == name)
     }
 
-    pub fn get_global_var_by_name(
-        &self,
-        name: &Name,
-    ) -> Option<&GlobalVariable> {
+    pub fn get_global_var_by_name(&self, name: &Name) -> Option<&GlobalVariable> {
         self.global_vars.iter().find(|global| global.name == *name)
     }
 
@@ -43,10 +37,7 @@ impl Module {
         self.show(&self.types)
     }
 
-    pub fn print_to_file(
-        &self,
-        output: &PathBuf,
-    ) -> Result<(), Error> {
+    pub fn print_to_file(&self, output: &PathBuf) -> Result<(), Error> {
         use std::fs::File;
         use std::io::Write;
 

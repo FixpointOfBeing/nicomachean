@@ -28,25 +28,16 @@ fn liveness_analysis(block: &BasicBlock) -> IntuBasicBlock {
     let mut intu_instrs = vec![];
 
     read_terminator(&block.term, &mut live);
-    let intu_term =
-        IntuTerm { term: block.term.clone(), live: live.clone() };
+    let intu_term = IntuTerm { term: block.term.clone(), live: live.clone() };
 
     for instr in block.instrs.iter().rev() {
         write_instr(instr, &mut live);
         read_instr(instr, &mut live);
-        intu_instrs.push(IntuInstru {
-            instr: instr.clone(),
-            live: live.clone(),
-        });
+        intu_instrs.push(IntuInstru { instr: instr.clone(), live: live.clone() });
     }
     intu_instrs.reverse();
 
-    IntuBasicBlock {
-        name: block.name.clone(),
-        intu_instrs,
-        intu_term,
-        live,
-    }
+    IntuBasicBlock { name: block.name.clone(), intu_instrs, intu_term, live }
 }
 
 fn insert_operand(operand: &Operand, live: &mut HashSet<Name>) {
@@ -357,23 +348,14 @@ mod tests {
     use crate::intu_ir::types::Types;
 
     fn mk_local(name: &str) -> Operand {
-        Operand::LocalOperand {
-            name: Name::Name(name.into()),
-            ty: Types::new().i32(),
-        }
+        Operand::LocalOperand { name: Name::Name(name.into()), ty: Types::new().i32() }
     }
 
     fn mk_const_int(value: u64) -> Operand {
-        Operand::ConstantOperand(ConstantRef::new(Constant::Int {
-            bits: 32,
-            value,
-        }))
+        Operand::ConstantOperand(ConstantRef::new(Constant::Int { bits: 32, value }))
     }
 
-    fn mk_bb(
-        instrs: Vec<Instruction>,
-        term: Terminator,
-    ) -> BasicBlock {
+    fn mk_bb(instrs: Vec<Instruction>, term: Terminator) -> BasicBlock {
         BasicBlock { name: Name::Name("bb".into()), instrs, term }
     }
 
@@ -385,16 +367,8 @@ mod tests {
         Terminator::Ret { return_operand: Some(operand) }
     }
 
-    fn add(
-        operand0: Operand,
-        operand1: Operand,
-        dest: &str,
-    ) -> Instruction {
-        Instruction::Add {
-            operand0,
-            operand1,
-            dest: Name::Name(dest.into()),
-        }
+    fn add(operand0: Operand, operand1: Operand, dest: &str) -> Instruction {
+        Instruction::Add { operand0, operand1, dest: Name::Name(dest.into()) }
     }
 
     fn analyze(bb: &BasicBlock) -> IntuBasicBlock {
@@ -430,8 +404,7 @@ mod tests {
 
     #[test]
     fn ret_void_reads_nothing() {
-        let bb =
-            mk_bb(vec![], Terminator::Ret { return_operand: None });
+        let bb = mk_bb(vec![], Terminator::Ret { return_operand: None });
         let result = analyze(&bb);
         assert_eq!(result.intu_term.live, HashSet::new());
         assert_eq!(result.live, HashSet::new());
@@ -449,13 +422,7 @@ mod tests {
         let b = mk_local("b");
         let c = mk_local("c");
         let a = mk_local("a");
-        let bb = mk_bb(
-            vec![
-                add(b.clone(), c.clone(), "a"),
-                add(a.clone(), mk_const_int(3), "d"),
-            ],
-            ret(mk_local("d")),
-        );
+        let bb = mk_bb(vec![add(b.clone(), c.clone(), "a"), add(a.clone(), mk_const_int(3), "d")], ret(mk_local("d")));
         let result = analyze(&bb);
         assert_eq!(result.intu_term.live, names(&["d"]));
         assert_eq!(result.intu_instrs[1].live, names(&["a"]));
@@ -482,10 +449,7 @@ mod tests {
 
     #[test]
     fn unused_definition_is_not_live() {
-        let bb = mk_bb(
-            vec![add(mk_const_int(1), mk_const_int(2), "a")],
-            Terminator::Unreachable,
-        );
+        let bb = mk_bb(vec![add(mk_const_int(1), mk_const_int(2), "a")], Terminator::Unreachable);
         let result = analyze(&bb);
         assert_eq!(result.intu_term.live, HashSet::new());
         assert_eq!(result.intu_instrs[0].live, HashSet::new());
@@ -494,10 +458,7 @@ mod tests {
 
     #[test]
     fn br_does_not_read_dest_block() {
-        let bb = mk_bb(
-            vec![],
-            Terminator::Br { dest: Name::Name("next".into()) },
-        );
+        let bb = mk_bb(vec![], Terminator::Br { dest: Name::Name("next".into()) });
         let result = analyze(&bb);
         assert_eq!(result.intu_term.live, HashSet::new());
         assert_eq!(result.live, HashSet::new());
@@ -524,10 +485,7 @@ mod tests {
         let addr = mk_local("addr");
         let bb = mk_bb(
             vec![],
-            Terminator::IndirectBr {
-                operand: addr.clone(),
-                possible_dests: vec![Name::Name("l1".into())],
-            },
+            Terminator::IndirectBr { operand: addr.clone(), possible_dests: vec![Name::Name("l1".into())] },
         );
         let result = analyze(&bb);
         assert_eq!(result.intu_term.live, names(&["addr"]));
@@ -538,11 +496,7 @@ mod tests {
         let p = mk_local("p");
         let v = mk_local("v");
         let bb = mk_bb(
-            vec![Instruction::Store {
-                address: p.clone(),
-                value: v.clone(),
-                alignment: 4,
-            }],
+            vec![Instruction::Store { address: p.clone(), value: v.clone(), alignment: 4 }],
             Terminator::Unreachable,
         );
         let result = analyze(&bb);
@@ -564,10 +518,7 @@ mod tests {
             Terminator::Unreachable,
         );
         let result = analyze(&bb);
-        assert_eq!(
-            result.intu_instrs[0].live,
-            names(&["agg", "elem"])
-        );
+        assert_eq!(result.intu_instrs[0].live, names(&["agg", "elem"]));
     }
 
     #[test]
@@ -602,10 +553,7 @@ mod tests {
             Terminator::Unreachable,
         );
         let result = analyze(&bb);
-        assert_eq!(
-            result.intu_instrs[0].live,
-            names(&["addr", "idx"])
-        );
+        assert_eq!(result.intu_instrs[0].live, names(&["addr", "idx"]));
     }
 
     #[test]

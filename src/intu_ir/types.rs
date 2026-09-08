@@ -114,9 +114,9 @@ impl Types {
     }
 
     pub fn int(&self, bits: u32) -> TypeRef {
-        self.int_types.lookup(&bits).unwrap_or_else(|| {
-            TypeRef::new(InstType::IntegerType { bits })
-        })
+        self.int_types
+            .lookup(&bits)
+            .unwrap_or_else(|| TypeRef::new(InstType::IntegerType { bits }))
     }
 
     pub fn bool(&self) -> TypeRef {
@@ -143,13 +143,10 @@ impl Types {
         self.pointer_in_addr_space(0)
     }
 
-    pub fn pointer_in_addr_space(
-        &self,
-        addr_space: AddrSpace,
-    ) -> TypeRef {
-        self.pointer_types.lookup(&addr_space).unwrap_or_else(|| {
-            TypeRef::new(InstType::PointerType { addr_space })
-        })
+    pub fn pointer_in_addr_space(&self, addr_space: AddrSpace) -> TypeRef {
+        self.pointer_types
+            .lookup(&addr_space)
+            .unwrap_or_else(|| TypeRef::new(InstType::PointerType { addr_space }))
     }
 
     pub fn fp(&self, fpt: FPType) -> TypeRef {
@@ -166,71 +163,37 @@ impl Types {
         self.fp(FPType::Double)
     }
 
-    pub fn func_type(
-        &self,
-        result_type: TypeRef,
-        param_types: Vec<TypeRef>,
-    ) -> TypeRef {
+    pub fn func_type(&self, result_type: TypeRef, param_types: Vec<TypeRef>) -> TypeRef {
         self.func_types
             .lookup(&(result_type.clone(), param_types.clone()))
-            .unwrap_or_else(|| {
-                TypeRef::new(InstType::FuncType {
-                    result_type,
-                    param_types,
-                })
-            })
+            .unwrap_or_else(|| TypeRef::new(InstType::FuncType { result_type, param_types }))
     }
 
-    pub fn vector_of(
-        &self,
-        element_type: TypeRef,
-        num_elements: usize,
-    ) -> TypeRef {
+    pub fn vector_of(&self, element_type: TypeRef, num_elements: usize) -> TypeRef {
         self.vec_types
             .lookup(&(element_type.clone(), num_elements))
-            .unwrap_or_else(|| {
-                TypeRef::new(InstType::VectorType {
-                    element_type,
-                    num_elements,
-                })
-            })
+            .unwrap_or_else(|| TypeRef::new(InstType::VectorType { element_type, num_elements }))
     }
 
-    pub fn array_of(
-        &self,
-        element_type: TypeRef,
-        num_elements: usize,
-    ) -> TypeRef {
+    pub fn array_of(&self, element_type: TypeRef, num_elements: usize) -> TypeRef {
         self.arr_types
             .lookup(&(element_type.clone(), num_elements))
-            .unwrap_or_else(|| {
-                TypeRef::new(InstType::ArrayType {
-                    element_type,
-                    num_elements,
-                })
-            })
+            .unwrap_or_else(|| TypeRef::new(InstType::ArrayType { element_type, num_elements }))
     }
 
     pub fn struct_of(&self, element_types: Vec<TypeRef>) -> TypeRef {
         self.struct_types
             .lookup(&element_types.clone())
-            .unwrap_or_else(|| {
-                TypeRef::new(InstType::StructType { element_types })
-            })
+            .unwrap_or_else(|| TypeRef::new(InstType::StructType { element_types }))
     }
 
     pub fn named_struct(&self, name: &str) -> TypeRef {
-        self.named_struct_types.lookup(name).unwrap_or_else(|| {
-            TypeRef::new(InstType::NamedStructType {
-                name: name.into(),
-            })
-        })
+        self.named_struct_types
+            .lookup(name)
+            .unwrap_or_else(|| TypeRef::new(InstType::NamedStructType { name: name.into() }))
     }
 
-    pub fn named_struct_def(
-        &self,
-        name: &str,
-    ) -> Option<&NamedStructDef> {
+    pub fn named_struct_def(&self, name: &str) -> Option<&NamedStructDef> {
         self.named_struct_defs.get(name)
     }
 
@@ -238,11 +201,7 @@ impl Types {
         self.named_struct_defs.keys()
     }
 
-    pub fn add_named_struct_def(
-        &mut self,
-        name: String,
-        def: NamedStructDef,
-    ) {
+    pub fn add_named_struct_def(&mut self, name: String, def: NamedStructDef) {
         match self.named_struct_defs.entry(name) {
             Entry::Occupied(_) => {
                 panic!("Trying to redefine named struct");
@@ -261,24 +220,13 @@ impl Types {
         match ty {
             InstType::VoidType => self.void(),
             InstType::IntegerType { bits } => self.int(*bits),
-            InstType::PointerType { addr_space } => {
-                self.pointer_in_addr_space(*addr_space)
-            },
+            InstType::PointerType { addr_space } => self.pointer_in_addr_space(*addr_space),
             InstType::FPType(fpt) => self.fp(*fpt),
-            InstType::FuncType { result_type, param_types } => self
-                .func_type(result_type.clone(), param_types.clone()),
-            InstType::VectorType { element_type, num_elements } => {
-                self.vector_of(element_type.clone(), *num_elements)
-            },
-            InstType::ArrayType { element_type, num_elements } => {
-                self.array_of(element_type.clone(), *num_elements)
-            },
-            InstType::StructType { element_types } => {
-                self.struct_of(element_types.clone())
-            },
-            InstType::NamedStructType { name } => {
-                self.named_struct(name)
-            },
+            InstType::FuncType { result_type, param_types } => self.func_type(result_type.clone(), param_types.clone()),
+            InstType::VectorType { element_type, num_elements } => self.vector_of(element_type.clone(), *num_elements),
+            InstType::ArrayType { element_type, num_elements } => self.array_of(element_type.clone(), *num_elements),
+            InstType::StructType { element_types } => self.struct_of(element_types.clone()),
+            InstType::NamedStructType { name } => self.named_struct(name),
         }
     }
 }
@@ -302,11 +250,7 @@ impl<K: Eq + Hash + Clone> TypeCache<K> {
         self.map.get(key).cloned()
     }
 
-    fn lookup_or_insert(
-        &mut self,
-        key: K,
-        if_missing: impl FnOnce() -> InstType,
-    ) -> TypeRef {
+    fn lookup_or_insert(&mut self, key: K, if_missing: impl FnOnce() -> InstType) -> TypeRef {
         self.map
             .entry(key)
             .or_insert_with(|| TypeRef::new(if_missing()))

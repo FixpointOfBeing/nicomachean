@@ -1,7 +1,7 @@
 edition = "2024"
 
 # 每行最大字符数
-max_width = 70
+max_width = 120
 
 # 使用 Unix 风格换行符（LF）
 newline_style = "Unix"

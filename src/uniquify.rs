@@ -3,11 +3,7 @@ use std::collections::HashMap;
 
 type NameEnv = HashMap<Ident, Ident>;
 
-fn bind(
-    gensym: &mut Gensym,
-    env: &mut NameEnv,
-    name: Ident,
-) -> (Ident, Option<Ident>) {
+fn bind(gensym: &mut Gensym, env: &mut NameEnv, name: Ident) -> (Ident, Option<Ident>) {
     let new_name = gensym.inc_fresh(&name);
     let old = env.insert(name, new_name.clone());
     (new_name, old)
@@ -24,11 +20,7 @@ fn unbind(env: &mut NameEnv, name: Ident, old: Option<Ident>) {
     }
 }
 
-pub fn rename(
-    gensym: &mut Gensym,
-    env: &mut NameEnv,
-    expr: TypedExpr,
-) -> TypedExpr {
+pub fn rename(gensym: &mut Gensym, env: &mut NameEnv, expr: TypedExpr) -> TypedExpr {
     match expr {
         TypedExpr::Unit => expr,
         TypedExpr::Bool(_) => expr,
@@ -51,40 +43,21 @@ pub fn rename(
             let cond = rename(gensym, env, *cond);
             let thn = rename(gensym, env, *thn);
             let els = rename(gensym, env, *els);
-            TypedExpr::If(
-                Box::new(cond),
-                Box::new(thn),
-                Box::new(els),
-                ty,
-            )
+            TypedExpr::If(Box::new(cond), Box::new(thn), Box::new(els), ty)
         },
         TypedExpr::Let(name, ty, rhs, body, let_ty) => {
             let rhs = rename(gensym, env, *rhs);
             let (new_name, old) = bind(gensym, env, name.clone());
             let body = rename(gensym, env, *body);
             unbind(env, name, old);
-            TypedExpr::Let(
-                new_name,
-                ty,
-                Box::new(rhs),
-                Box::new(body),
-                let_ty,
-            )
+            TypedExpr::Let(new_name, ty, Box::new(rhs), Box::new(body), let_ty)
         },
         TypedExpr::Var(name, ty) => {
             let new_name = env.get(&name).expect("unbound variable");
             TypedExpr::Var(new_name.to_string(), ty)
         },
-        TypedExpr::LetRec(
-            fname,
-            fparams,
-            fty,
-            fbody,
-            body,
-            letrec_ty,
-        ) => {
-            let (new_fname, old_fname) =
-                bind(gensym, env, fname.clone());
+        TypedExpr::LetRec(fname, fparams, fty, fbody, body, letrec_ty) => {
+            let (new_fname, old_fname) = bind(gensym, env, fname.clone());
 
             let mut new_fparams = vec![];
             let mut old_fparams = vec![];
@@ -103,21 +76,11 @@ pub fn rename(
             let body = rename(gensym, env, *body);
             unbind(env, fname, old_fname);
 
-            TypedExpr::LetRec(
-                new_fname,
-                new_fparams,
-                fty,
-                Box::new(fbody),
-                Box::new(body),
-                letrec_ty,
-            )
+            TypedExpr::LetRec(new_fname, new_fparams, fty, Box::new(fbody), Box::new(body), letrec_ty)
         },
         TypedExpr::App(func, args, ty) => {
             let func = rename(gensym, env, *func);
-            let args = args
-                .into_iter()
-                .map(|e| rename(gensym, env, e))
-                .collect();
+            let args = args.into_iter().map(|e| rename(gensym, env, e)).collect();
             TypedExpr::App(Box::new(func), args, ty)
         },
         TypedExpr::Lambda(param, ty, body, lambda_ty) => {
@@ -135,12 +98,7 @@ pub fn rename(
                 unbind(env, name, old);
             }
 
-            TypedExpr::Lambda(
-                new_params,
-                ty,
-                Box::new(body),
-                lambda_ty,
-            )
+            TypedExpr::Lambda(new_params, ty, Box::new(body), lambda_ty)
         },
     }
 }
@@ -164,13 +122,9 @@ mod tests {
         Box::new(TypedExpr::Int(n))
     }
 
-    fn expect_let(
-        expr: &TypedExpr,
-    ) -> (&Ident, &TypedExpr, &TypedExpr) {
+    fn expect_let(expr: &TypedExpr) -> (&Ident, &TypedExpr, &TypedExpr) {
         match expr {
-            TypedExpr::Let(name, _, rhs, body, _) => {
-                (name, rhs, body)
-            },
+            TypedExpr::Let(name, _, rhs, body, _) => (name, rhs, body),
             other => {
                 panic!("expected TypedExpr::Let, got {:?}", other)
             },
@@ -188,49 +142,28 @@ mod tests {
 
     #[test]
     fn unit_is_unchanged() {
-        assert_eq!(
-            uniquify_convert(TypedExpr::Unit),
-            TypedExpr::Unit
-        );
+        assert_eq!(uniquify_convert(TypedExpr::Unit), TypedExpr::Unit);
     }
 
     #[test]
     fn bool_is_unchanged() {
-        assert_eq!(
-            uniquify_convert(TypedExpr::Bool(true)),
-            TypedExpr::Bool(true)
-        );
-        assert_eq!(
-            uniquify_convert(TypedExpr::Bool(false)),
-            TypedExpr::Bool(false)
-        );
+        assert_eq!(uniquify_convert(TypedExpr::Bool(true)), TypedExpr::Bool(true));
+        assert_eq!(uniquify_convert(TypedExpr::Bool(false)), TypedExpr::Bool(false));
     }
 
     #[test]
     fn int_is_unchanged() {
-        assert_eq!(
-            uniquify_convert(TypedExpr::Int(42)),
-            TypedExpr::Int(42)
-        );
+        assert_eq!(uniquify_convert(TypedExpr::Int(42)), TypedExpr::Int(42));
     }
 
     #[test]
     fn float_is_unchanged() {
-        assert_eq!(
-            uniquify_convert(TypedExpr::Float(3.14)),
-            TypedExpr::Float(3.14)
-        );
+        assert_eq!(uniquify_convert(TypedExpr::Float(3.14)), TypedExpr::Float(3.14));
     }
 
     #[test]
     fn let_renames_var_in_body() {
-        let expr = TypedExpr::Let(
-            "x".to_string(),
-            Type::Int,
-            int(1),
-            v("x"),
-            Type::Int,
-        );
+        let expr = TypedExpr::Let("x".to_string(), Type::Int, int(1), v("x"), Type::Int);
         let renamed = uniquify_convert(expr);
         let (bound_name, _, body) = expect_let(&renamed);
         let used_name = expect_var(body);
@@ -244,27 +177,15 @@ mod tests {
             "x".to_string(),
             Type::Int,
             int(1),
-            Box::new(TypedExpr::Let(
-                "x".to_string(),
-                Type::Int,
-                int(2),
-                v("x"),
-                Type::Int,
-            )),
+            Box::new(TypedExpr::Let("x".to_string(), Type::Int, int(2), v("x"), Type::Int)),
             Type::Int,
         );
         let renamed = uniquify_convert(expr);
         let (outer_name, _, outer_body) = expect_let(&renamed);
         let (inner_name, _, inner_body) = expect_let(outer_body);
         let used_name = expect_var(inner_body);
-        assert_ne!(
-            outer_name, inner_name,
-            "shadowing let must get a new fresh name"
-        );
-        assert_eq!(
-            inner_name, used_name,
-            "body must refer to the innermost x"
-        );
+        assert_ne!(outer_name, inner_name, "shadowing let must get a new fresh name");
+        assert_eq!(inner_name, used_name, "body must refer to the innermost x");
     }
 
     #[test]
@@ -280,10 +201,7 @@ mod tests {
                     vec![("x".to_string(), Type::Int)],
                     Type::Int,
                     v("x"),
-                    Type::Arrow(
-                        Box::new(Type::Int),
-                        Box::new(Type::Int),
-                    ),
+                    Type::Arrow(Box::new(Type::Int), Box::new(Type::Int)),
                 )),
                 v("x"),
                 Type::Int,
@@ -299,24 +217,15 @@ mod tests {
             TypedExpr::Lambda(params, _, lambda_body, _) => {
                 let param_name = &params[0].0;
                 let used_in_lambda = expect_var(lambda_body);
-                assert_eq!(
-                    param_name, used_in_lambda,
-                    "lambda body must refer to its own param"
-                );
+                assert_eq!(param_name, used_in_lambda, "lambda body must refer to its own param");
                 param_name.clone()
             },
             other => panic!("expected Lambda, got {:?}", other),
         };
 
         let final_name = expect_var(final_body);
-        assert_eq!(
-            final_name, outer_name,
-            "outer `x` must not be hijacked by the lambda's shadowing `x`"
-        );
-        assert_ne!(
-            final_name, &lambda_param_name,
-            "outer x and lambda's x must end up as different fresh names"
-        );
+        assert_eq!(final_name, outer_name, "outer `x` must not be hijacked by the lambda's shadowing `x`");
+        assert_ne!(final_name, &lambda_param_name, "outer x and lambda's x must end up as different fresh names");
     }
 
     #[test]
@@ -343,16 +252,10 @@ mod tests {
             TypedExpr::LetRec(_, fparams, _, fbody, cont, _) => {
                 let param_name = &fparams[0].0;
                 let body_var = expect_var(fbody);
-                assert_eq!(
-                    param_name, body_var,
-                    "function body refers to its own param"
-                );
+                assert_eq!(param_name, body_var, "function body refers to its own param");
 
                 let cont_var = expect_var(cont);
-                assert_eq!(
-                    cont_var, outer_x,
-                    "continuation after LetRec must see the outer x, not f's argument"
-                );
+                assert_eq!(cont_var, outer_x, "continuation after LetRec must see the outer x, not f's argument");
             },
             other => panic!("expected LetRec, got {:?}", other),
         }
@@ -372,10 +275,7 @@ mod tests {
         match renamed {
             TypedExpr::LetRec(new_fname, _, _, _, cont, _) => {
                 let cont_name = expect_var(&cont);
-                assert_eq!(
-                    &new_fname, cont_name,
-                    "continuation must resolve fact to its fresh name"
-                );
+                assert_eq!(&new_fname, cont_name, "continuation must resolve fact to its fresh name");
             },
             other => panic!("expected LetRec, got {:?}", other),
         }
@@ -384,17 +284,9 @@ mod tests {
     #[test]
     fn lambda_multi_param_each_gets_fresh_name() {
         let expr = TypedExpr::Lambda(
-            vec![
-                ("x".to_string(), Type::Int),
-                ("y".to_string(), Type::Int),
-            ],
+            vec![("x".to_string(), Type::Int), ("y".to_string(), Type::Int)],
             Type::Int,
-            Box::new(TypedExpr::BinOp(
-                BinOp::Add,
-                v("x"),
-                v("y"),
-                Type::Int,
-            )),
+            Box::new(TypedExpr::BinOp(BinOp::Add, v("x"), v("y"), Type::Int)),
             Type::Arrow(Box::new(Type::Int), Box::new(Type::Int)),
         );
         let renamed = uniquify_convert(expr);
@@ -425,12 +317,7 @@ mod tests {
                 "y".to_string(),
                 Type::Int,
                 int(2),
-                Box::new(TypedExpr::BinOp(
-                    BinOp::Add,
-                    v("x"),
-                    v("y"),
-                    Type::Int,
-                )),
+                Box::new(TypedExpr::BinOp(BinOp::Add, v("x"), v("y"), Type::Int)),
                 Type::Int,
             )),
             Type::Int,
@@ -453,11 +340,7 @@ mod tests {
             "x".to_string(),
             Type::Int,
             int(1),
-            Box::new(TypedExpr::UnaryOp(
-                UnaryOp::Neg,
-                v("x"),
-                Type::Int,
-            )),
+            Box::new(TypedExpr::UnaryOp(UnaryOp::Neg, v("x"), Type::Int)),
             Type::Int,
         );
         let renamed = uniquify_convert(expr);
@@ -476,12 +359,7 @@ mod tests {
             "x".to_string(),
             Type::Int,
             int(1),
-            Box::new(TypedExpr::If(
-                v("x"),
-                v("x"),
-                v("x"),
-                Type::Int,
-            )),
+            Box::new(TypedExpr::If(v("x"), v("x"), v("x"), Type::Int)),
             Type::Int,
         );
         let renamed = uniquify_convert(expr);
@@ -534,22 +412,13 @@ mod tests {
 
     #[test]
     fn ann_inner_expr_is_actually_renamed() {
-        let expr = TypedExpr::Let(
-            "x".to_string(),
-            Type::Int,
-            int(1),
-            Box::new(TypedExpr::Ann(v("x"), Type::Int)),
-            Type::Int,
-        );
+        let expr =
+            TypedExpr::Let("x".to_string(), Type::Int, int(1), Box::new(TypedExpr::Ann(v("x"), Type::Int)), Type::Int);
         let renamed = uniquify_convert(expr);
         let (x_name, _, body) = expect_let(&renamed);
         match body {
             TypedExpr::Ann(inner, ty) => {
-                assert_eq!(
-                    expect_var(inner),
-                    x_name,
-                    "Ann must rename its inner expr, not clone it verbatim"
-                );
+                assert_eq!(expect_var(inner), x_name, "Ann must rename its inner expr, not clone it verbatim");
                 assert_eq!(*ty, Type::Int);
             },
             other => panic!("expected Ann, got {:?}", other),
@@ -583,12 +452,7 @@ mod tests {
             vec![("n".to_string(), Type::Int)],
             Type::Int,
             Box::new(TypedExpr::If(
-                Box::new(TypedExpr::BinOp(
-                    BinOp::Eq,
-                    v("n"),
-                    int(0),
-                    Type::Int,
-                )),
+                Box::new(TypedExpr::BinOp(BinOp::Eq, v("n"), int(0), Type::Int)),
                 int(1),
                 Box::new(TypedExpr::BinOp(
                     BinOp::Mul,
@@ -597,10 +461,7 @@ mod tests {
                         v("fact"),
                         vec![TypedExpr::BinOp(
                             BinOp::Sub,
-                            Box::new(TypedExpr::Var(
-                                "n".to_string(),
-                                Type::Int,
-                            )),
+                            Box::new(TypedExpr::Var("n".to_string(), Type::Int)),
                             int(1),
                             Type::Int,
                         )],
@@ -610,24 +471,13 @@ mod tests {
                 )),
                 Type::Int,
             )),
-            Box::new(TypedExpr::App(
-                v("fact"),
-                vec![TypedExpr::Int(5)],
-                Type::Int,
-            )),
+            Box::new(TypedExpr::App(v("fact"), vec![TypedExpr::Int(5)], Type::Int)),
             Type::Int,
         );
 
         let renamed = uniquify_convert(expr);
         match renamed {
-            TypedExpr::LetRec(
-                new_fname,
-                fparams,
-                _,
-                fbody,
-                cont,
-                _,
-            ) => {
+            TypedExpr::LetRec(new_fname, fparams, _, fbody, cont, _) => {
                 let n_name = &fparams[0].0;
 
                 match *fbody {
@@ -651,33 +501,16 @@ mod tests {
                                             "recursive call must use fact's fresh name"
                                         );
                                         match &args[0] {
-                                            TypedExpr::BinOp(
-                                                BinOp::Sub,
-                                                l,
-                                                _,
-                                                _,
-                                            ) => {
-                                                assert_eq!(
-                                                    expect_var(l),
-                                                    n_name
-                                                )
+                                            TypedExpr::BinOp(BinOp::Sub, l, _, _) => {
+                                                assert_eq!(expect_var(l), n_name)
                                             },
-                                            other => panic!(
-                                                "expected Sub, got {:?}",
-                                                other
-                                            ),
+                                            other => panic!("expected Sub, got {:?}", other),
                                         }
                                     },
-                                    other => panic!(
-                                        "expected App, got {:?}",
-                                        other
-                                    ),
+                                    other => panic!("expected App, got {:?}", other),
                                 }
                             },
-                            other => panic!(
-                                "expected Mul, got {:?}",
-                                other
-                            ),
+                            other => panic!("expected Mul, got {:?}", other),
                         }
                     },
                     other => panic!("expected If, got {:?}", other),
@@ -685,11 +518,7 @@ mod tests {
 
                 match *cont {
                     TypedExpr::App(func, args, _) => {
-                        assert_eq!(
-                            expect_var(&func),
-                            &new_fname,
-                            "top-level call site must use fact's fresh name"
-                        );
+                        assert_eq!(expect_var(&func), &new_fname, "top-level call site must use fact's fresh name");
                         assert_eq!(args, vec![TypedExpr::Int(5)]);
                     },
                     other => panic!("expected App, got {:?}", other),

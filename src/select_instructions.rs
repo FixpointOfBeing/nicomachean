@@ -4,45 +4,29 @@ use crate::{
     riscv::rv64imfd_instr::Rm,
     riscv_var::{
         basicblock::RvVarBasicBlock,
-        instruction::{
-            RvVarInstr, fmv_d, fneg_d, li, mv, seqz, snez,
-        },
-        label::Label,
-        location::{
-            RvVarLocation, a0, fa0, ft0, ft1, ra, t0, t1, x0, zero,
-        },
+        instruction::{RvVarInstr, fmv_d, fneg_d, li, mv, seqz, snez},
+        location::{RvVarLocation, a0, fa0, ft0, ft1, ra, t0, t1, x0, zero},
         program::RvVarProgram,
     },
     syntax::{BinOp, Type, UnaryOp},
 };
 
-use crate::riscv::rv64imfd_imm::Imm12;
+use crate::riscv::Label;
+use crate::riscv::Imm12;
 
 fn bool_not(rd: RvVarLocation, rs1: RvVarLocation) -> RvVarInstr {
     RvVarInstr::Xori { rd, rs1: rs1, imm: Imm12::from_i16(1) }
 }
 
-fn select_atom(
-    atom: CAtom,
-    instrs: &mut Vec<RvVarInstr>,
-    dest: RvVarLocation,
-) {
+fn select_atom(atom: CAtom, instrs: &mut Vec<RvVarInstr>, dest: RvVarLocation) {
     match atom {
         CAtom::Unit => {
-            let instr = RvVarInstr::Addi {
-                rd: dest,
-                rs1: zero(),
-                imm: Imm12::from_i16(0),
-            };
+            let instr = RvVarInstr::Addi { rd: dest, rs1: zero(), imm: Imm12::from_i16(0) };
             instrs.push(instr);
         },
         CAtom::Bool(b) => {
             let v = if b { 1 } else { 0 };
-            let instr = RvVarInstr::Addi {
-                rd: dest,
-                rs1: zero(),
-                imm: Imm12::from_i16(v as i16),
-            };
+            let instr = RvVarInstr::Addi { rd: dest, rs1: zero(), imm: Imm12::from_i16(v as i16) };
             instrs.push(instr);
         },
         CAtom::Int(i) => instrs.append(&mut li(dest, i)),
@@ -79,9 +63,7 @@ fn is_cexpr_float_type(expr: &CExpr) -> bool {
     match expr {
         CExpr::Atom(catom) => is_catom_float_type(catom),
         CExpr::BinOp(op, catom, _) => match op {
-            BinOp::Add | BinOp::Sub | BinOp::Mul | BinOp::Div => {
-                is_catom_float_type(catom)
-            },
+            BinOp::Add | BinOp::Sub | BinOp::Mul | BinOp::Div => is_catom_float_type(catom),
             _ => false,
         },
         CExpr::UnaryOp(op, catom) => match op {
@@ -94,59 +76,39 @@ fn is_cexpr_float_type(expr: &CExpr) -> bool {
     }
 }
 
-fn select_expr_binop_xreg(
-    op: BinOp,
-    left: CAtom,
-    right: CAtom,
-    instrs: &mut Vec<RvVarInstr>,
-    dest: RvVarLocation,
-) {
-    debug_assert!(matches!(
-        dest,
-        RvVarLocation::XVar(_) | RvVarLocation::XReg(_)
-    ));
+fn select_expr_binop_xreg(op: BinOp, left: CAtom, right: CAtom, instrs: &mut Vec<RvVarInstr>, dest: RvVarLocation) {
+    debug_assert!(matches!(dest, RvVarLocation::XVar(_) | RvVarLocation::XReg(_)));
 
     match op {
         BinOp::Add => {
             select_atom(left, instrs, t0());
             select_atom(right, instrs, t1());
-            let instr = RvVarInstr::Add {
-                rd: dest.clone(),
-                rs1: t0(),
-                rs2: t1(),
-            };
+            let instr = RvVarInstr::Add { rd: dest.clone(), rs1: t0(), rs2: t1() };
             instrs.push(instr);
         },
         BinOp::Sub => {
             select_atom(left, instrs, t0());
             select_atom(right, instrs, t1());
-            let instr =
-                RvVarInstr::Sub { rd: dest, rs1: t0(), rs2: t1() };
+            let instr = RvVarInstr::Sub { rd: dest, rs1: t0(), rs2: t1() };
             instrs.push(instr);
         },
         BinOp::Mul => {
             // 乘法溢出的处理（回绕）
             select_atom(left, instrs, t0());
             select_atom(right, instrs, t1());
-            let instr =
-                RvVarInstr::Mul { rd: dest, rs1: t0(), rs2: t1() };
+            let instr = RvVarInstr::Mul { rd: dest, rs1: t0(), rs2: t1() };
             instrs.push(instr);
         },
         BinOp::Div => {
             select_atom(left, instrs, t0());
             select_atom(right, instrs, t1());
-            let instr =
-                RvVarInstr::Div { rd: dest, rs1: t0(), rs2: t1() };
+            let instr = RvVarInstr::Div { rd: dest, rs1: t0(), rs2: t1() };
             instrs.push(instr);
         },
         BinOp::Eq => {
             select_atom(left, instrs, t0());
             select_atom(right, instrs, t1());
-            let sub = RvVarInstr::Sub {
-                rd: dest.clone(),
-                rs1: t0(),
-                rs2: t1(),
-            };
+            let sub = RvVarInstr::Sub { rd: dest.clone(), rs1: t0(), rs2: t1() };
             let set_bool = seqz(dest.clone(), dest);
             instrs.push(sub);
             instrs.push(set_bool);
@@ -154,11 +116,7 @@ fn select_expr_binop_xreg(
         BinOp::Neq => {
             select_atom(left, instrs, t0());
             select_atom(right, instrs, t1());
-            let sub = RvVarInstr::Sub {
-                rd: dest.clone(),
-                rs1: t0(),
-                rs2: t1(),
-            };
+            let sub = RvVarInstr::Sub { rd: dest.clone(), rs1: t0(), rs2: t1() };
             let set_bool = snez(dest.clone(), dest);
             instrs.push(sub);
             instrs.push(set_bool);
@@ -166,26 +124,20 @@ fn select_expr_binop_xreg(
         BinOp::Lt => {
             select_atom(left, instrs, t0());
             select_atom(right, instrs, t1());
-            let instr =
-                RvVarInstr::Slt { rd: dest, rs1: t0(), rs2: t1() };
+            let instr = RvVarInstr::Slt { rd: dest, rs1: t0(), rs2: t1() };
             instrs.push(instr);
         },
         BinOp::Gt => {
             select_atom(left, instrs, t0());
             select_atom(right, instrs, t1());
-            let instr =
-                RvVarInstr::Slt { rd: dest, rs1: t1(), rs2: t0() };
+            let instr = RvVarInstr::Slt { rd: dest, rs1: t1(), rs2: t0() };
             instrs.push(instr);
         },
         BinOp::Leq => {
             // left <= right => !(left > right)
             select_atom(left, instrs, t0());
             select_atom(right, instrs, t1());
-            let right_lt_left = RvVarInstr::Slt {
-                rd: dest.clone(),
-                rs1: t1(),
-                rs2: t0(),
-            };
+            let right_lt_left = RvVarInstr::Slt { rd: dest.clone(), rs1: t1(), rs2: t0() };
             let reverse = bool_not(dest.clone(), dest);
             instrs.push(right_lt_left);
             instrs.push(reverse);
@@ -194,11 +146,7 @@ fn select_expr_binop_xreg(
             // left >= right => !(left < right)
             select_atom(left, instrs, t0());
             select_atom(right, instrs, t1());
-            let left_lt_right = RvVarInstr::Slt {
-                rd: dest.clone(),
-                rs1: t0(),
-                rs2: t1(),
-            };
+            let left_lt_right = RvVarInstr::Slt { rd: dest.clone(), rs1: t0(), rs2: t1() };
 
             let reverse = bool_not(dest.clone(), dest);
             instrs.push(left_lt_right);
@@ -208,173 +156,100 @@ fn select_expr_binop_xreg(
     }
 }
 
-fn select_expr_binop_freg(
-    op: BinOp,
-    left: CAtom,
-    right: CAtom,
-    instrs: &mut Vec<RvVarInstr>,
-    dest: RvVarLocation,
-) {
+fn select_expr_binop_freg(op: BinOp, left: CAtom, right: CAtom, instrs: &mut Vec<RvVarInstr>, dest: RvVarLocation) {
     match op {
         BinOp::Add => {
-            debug_assert!(matches!(
-                dest,
-                RvVarLocation::FVar(_) | RvVarLocation::FReg(_)
-            ));
+            debug_assert!(matches!(dest, RvVarLocation::FVar(_) | RvVarLocation::FReg(_)));
 
             select_atom(left, instrs, ft0());
             select_atom(right, instrs, ft1());
-            let instr = RvVarInstr::FaddD {
-                rd: dest,
-                rs1: ft0(),
-                rs2: ft1(),
-                rm: Rm::Rne,
-            };
+            let instr = RvVarInstr::FaddD { rd: dest, rs1: ft0(), rs2: ft1(), rm: Rm::Rne };
             instrs.push(instr);
         },
         BinOp::Sub => {
-            debug_assert!(matches!(
-                dest,
-                RvVarLocation::FVar(_) | RvVarLocation::FReg(_)
-            ));
+            debug_assert!(matches!(dest, RvVarLocation::FVar(_) | RvVarLocation::FReg(_)));
 
             select_atom(left, instrs, ft0());
             select_atom(right, instrs, ft1());
-            let instr = RvVarInstr::FsubD {
-                rd: dest,
-                rs1: ft0(),
-                rs2: ft1(),
-                rm: Rm::Rne,
-            };
+            let instr = RvVarInstr::FsubD { rd: dest, rs1: ft0(), rs2: ft1(), rm: Rm::Rne };
             instrs.push(instr);
         },
         BinOp::Mul => {
-            debug_assert!(matches!(
-                dest,
-                RvVarLocation::FVar(_) | RvVarLocation::FReg(_)
-            ));
+            debug_assert!(matches!(dest, RvVarLocation::FVar(_) | RvVarLocation::FReg(_)));
 
             select_atom(left, instrs, ft0());
             select_atom(right, instrs, ft1());
-            let instr = RvVarInstr::FmulD {
-                rd: dest,
-                rs1: ft0(),
-                rs2: ft1(),
-                rm: Rm::Rne,
-            };
+            let instr = RvVarInstr::FmulD { rd: dest, rs1: ft0(), rs2: ft1(), rm: Rm::Rne };
             instrs.push(instr);
         },
         BinOp::Div => {
-            debug_assert!(matches!(
-                dest,
-                RvVarLocation::FVar(_) | RvVarLocation::FReg(_)
-            ));
+            debug_assert!(matches!(dest, RvVarLocation::FVar(_) | RvVarLocation::FReg(_)));
 
             select_atom(left, instrs, ft0());
             select_atom(right, instrs, ft1());
-            let instr = RvVarInstr::FdivD {
-                rd: dest,
-                rs1: ft0(),
-                rs2: ft1(),
-                rm: Rm::Rne,
-            };
+            let instr = RvVarInstr::FdivD { rd: dest, rs1: ft0(), rs2: ft1(), rm: Rm::Rne };
             instrs.push(instr);
         },
         BinOp::Eq => {
-            debug_assert!(matches!(
-                dest,
-                RvVarLocation::XVar(_) | RvVarLocation::XReg(_)
-            ));
+            debug_assert!(matches!(dest, RvVarLocation::XVar(_) | RvVarLocation::XReg(_)));
 
             select_atom(left, instrs, ft0());
             select_atom(right, instrs, ft1());
-            let instr =
-                RvVarInstr::FeqD { rd: dest, rs1: ft0(), rs2: ft1() };
+            let instr = RvVarInstr::FeqD { rd: dest, rs1: ft0(), rs2: ft1() };
             instrs.push(instr);
         },
         BinOp::Neq => {
-            debug_assert!(matches!(
-                dest,
-                RvVarLocation::XVar(_) | RvVarLocation::XReg(_)
-            ));
+            debug_assert!(matches!(dest, RvVarLocation::XVar(_) | RvVarLocation::XReg(_)));
 
             select_atom(left, instrs, ft0());
             select_atom(right, instrs, ft1());
-            let eq = RvVarInstr::FeqD {
-                rd: dest.clone(),
-                rs1: ft0(),
-                rs2: ft1(),
-            };
+            let eq = RvVarInstr::FeqD { rd: dest.clone(), rs1: ft0(), rs2: ft1() };
             let reverse = bool_not(dest.clone(), dest);
             instrs.push(eq);
             instrs.push(reverse);
         },
         BinOp::Lt => {
-            debug_assert!(matches!(
-                dest,
-                RvVarLocation::XVar(_) | RvVarLocation::XReg(_)
-            ));
+            debug_assert!(matches!(dest, RvVarLocation::XVar(_) | RvVarLocation::XReg(_)));
 
             select_atom(left, instrs, ft0());
             select_atom(right, instrs, ft1());
-            let instr =
-                RvVarInstr::FltD { rd: dest, rs1: ft0(), rs2: ft1() };
+            let instr = RvVarInstr::FltD { rd: dest, rs1: ft0(), rs2: ft1() };
             instrs.push(instr);
         },
         BinOp::Gt => {
-            debug_assert!(matches!(
-                dest,
-                RvVarLocation::XVar(_) | RvVarLocation::XReg(_)
-            ));
+            debug_assert!(matches!(dest, RvVarLocation::XVar(_) | RvVarLocation::XReg(_)));
 
             // left > right => right < left
             select_atom(left, instrs, ft0());
             select_atom(right, instrs, ft1());
-            let instr =
-                RvVarInstr::FltD { rd: dest, rs1: ft1(), rs2: ft0() };
+            let instr = RvVarInstr::FltD { rd: dest, rs1: ft1(), rs2: ft0() };
             instrs.push(instr);
         },
         BinOp::Leq => {
-            debug_assert!(matches!(
-                dest,
-                RvVarLocation::XVar(_) | RvVarLocation::XReg(_)
-            ));
+            debug_assert!(matches!(dest, RvVarLocation::XVar(_) | RvVarLocation::XReg(_)));
 
             select_atom(left, instrs, ft0());
             select_atom(right, instrs, ft1());
-            let instr =
-                RvVarInstr::FleD { rd: dest, rs1: ft0(), rs2: ft1() };
+            let instr = RvVarInstr::FleD { rd: dest, rs1: ft0(), rs2: ft1() };
             instrs.push(instr);
         },
         BinOp::Geq => {
-            debug_assert!(matches!(
-                dest,
-                RvVarLocation::XVar(_) | RvVarLocation::XReg(_)
-            ));
+            debug_assert!(matches!(dest, RvVarLocation::XVar(_) | RvVarLocation::XReg(_)));
 
             // left >= right => right <= left
             select_atom(left, instrs, ft0());
             select_atom(right, instrs, ft1());
-            let instr =
-                RvVarInstr::FleD { rd: dest, rs1: ft1(), rs2: ft0() };
+            let instr = RvVarInstr::FleD { rd: dest, rs1: ft1(), rs2: ft0() };
             instrs.push(instr);
         },
         _ => unreachable!(),
     }
 }
 
-fn select_expr_unaryop_freg(
-    op: UnaryOp,
-    atom: CAtom,
-    instrs: &mut Vec<RvVarInstr>,
-    dest: RvVarLocation,
-) {
+fn select_expr_unaryop_freg(op: UnaryOp, atom: CAtom, instrs: &mut Vec<RvVarInstr>, dest: RvVarLocation) {
     match op {
         UnaryOp::Neg => {
-            debug_assert!(matches!(
-                dest,
-                RvVarLocation::FVar(_) | RvVarLocation::FReg(_)
-            ));
+            debug_assert!(matches!(dest, RvVarLocation::FVar(_) | RvVarLocation::FReg(_)));
 
             select_atom(atom, instrs, dest.clone());
             let instr = fneg_d(dest.clone(), dest);
@@ -384,35 +259,20 @@ fn select_expr_unaryop_freg(
     }
 }
 
-fn select_expr_unaryop_xreg(
-    op: UnaryOp,
-    atom: CAtom,
-    instrs: &mut Vec<RvVarInstr>,
-    dest: RvVarLocation,
-) {
+fn select_expr_unaryop_xreg(op: UnaryOp, atom: CAtom, instrs: &mut Vec<RvVarInstr>, dest: RvVarLocation) {
     match op {
         UnaryOp::Neg => {
-            debug_assert!(matches!(
-                dest,
-                RvVarLocation::XVar(_) | RvVarLocation::XReg(_)
-            ));
+            debug_assert!(matches!(dest, RvVarLocation::XVar(_) | RvVarLocation::XReg(_)));
 
             select_atom(atom, instrs, dest.clone());
-            let sub = RvVarInstr::Sub {
-                rd: dest.clone(),
-                rs1: zero(),
-                rs2: dest,
-            };
+            let sub = RvVarInstr::Sub { rd: dest.clone(), rs1: zero(), rs2: dest };
             instrs.push(sub);
         },
         UnaryOp::Not => unreachable!(),
     }
 }
-fn select_expr(
-    expr: CExpr,
-    instrs: &mut Vec<RvVarInstr>,
-    dest: RvVarLocation,
-) {
+
+fn select_expr(expr: CExpr, instrs: &mut Vec<RvVarInstr>, dest: RvVarLocation) {
     match expr {
         CExpr::Atom(catom) => {
             select_atom(catom, instrs, dest);
@@ -421,29 +281,20 @@ fn select_expr(
             BinOp::And => {
                 select_atom(left, instrs, t0());
                 select_atom(right, instrs, t1());
-                let instr = RvVarInstr::And {
-                    rd: dest,
-                    rs1: t0(),
-                    rs2: t1(),
-                };
+                let instr = RvVarInstr::And { rd: dest, rs1: t0(), rs2: t1() };
                 instrs.push(instr);
             },
             BinOp::Or => {
                 select_atom(left, instrs, t0());
                 select_atom(right, instrs, t1());
-                let instr =
-                    RvVarInstr::Or { rd: dest, rs1: t0(), rs2: t1() };
+                let instr = RvVarInstr::Or { rd: dest, rs1: t0(), rs2: t1() };
                 instrs.push(instr);
             },
             _ => {
                 if is_catom_float_type(&left) {
-                    select_expr_binop_freg(
-                        op, left, right, instrs, dest,
-                    );
+                    select_expr_binop_freg(op, left, right, instrs, dest);
                 } else {
-                    select_expr_binop_xreg(
-                        op, left, right, instrs, dest,
-                    );
+                    select_expr_binop_xreg(op, left, right, instrs, dest);
                 }
             },
         },
@@ -470,35 +321,19 @@ fn select_expr(
 fn select_stmt(stmt: CStmt, instrs: &mut Vec<RvVarInstr>) {
     match stmt {
         CStmt::Assign(name, cexpr, ty) => {
-            let var = if matches!(ty, Type::Float) {
-                RvVarLocation::FVar(name)
-            } else {
-                RvVarLocation::XVar(name)
-            };
+            let var = if matches!(ty, Type::Float) { RvVarLocation::FVar(name) } else { RvVarLocation::XVar(name) };
             select_expr(cexpr, instrs, var);
         },
     }
 }
-pub fn select_tail(
-    tail: CTail,
-    gensym: &mut Gensym,
-    mut current: RvVarBasicBlock,
-    prog: &mut RvVarProgram,
-) {
+
+pub fn select_tail(tail: CTail, gensym: &mut Gensym, mut current: RvVarBasicBlock, prog: &mut RvVarProgram) {
     let instrs = &mut current.instrs;
     match tail {
         CTail::Return(cexpr) => {
-            let dest = if is_cexpr_float_type(&cexpr) {
-                fa0()
-            } else {
-                a0()
-            };
+            let dest = if is_cexpr_float_type(&cexpr) { fa0() } else { a0() };
             select_expr(cexpr, instrs, dest);
-            let instr = RvVarInstr::Jalr {
-                rd: x0(),
-                rs1: ra(),
-                imm: Imm12::from_i16(0),
-            };
+            let instr = RvVarInstr::Jalr { rd: x0(), rs1: ra(), imm: Imm12::from_i16(0) };
             instrs.push(instr);
             prog.append_basic_block(current);
         },
@@ -521,11 +356,7 @@ pub fn select_tail(
             let then_label = Label::new(then_name);
             let else_label = Label::new(else_name);
 
-            let branch = RvVarInstr::Beq {
-                rs1: t0(),
-                rs2: zero(),
-                label: else_label.clone(),
-            };
+            let branch = RvVarInstr::Beq { rs1: t0(), rs2: zero(), label: else_label.clone() };
             instrs.push(branch);
 
             prog.append_basic_block(current);
@@ -554,17 +385,11 @@ mod tests {
         (v << (64 - bits)) >> (64 - bits)
     }
 
-    fn lookup(
-        env: &[(RvVarLocation, Val)],
-        loc: &RvVarLocation,
-    ) -> Val {
+    fn lookup(env: &[(RvVarLocation, Val)], loc: &RvVarLocation) -> Val {
         env.iter().rev().find(|(l, _)| l == loc).unwrap().1.clone()
     }
 
-    fn lookup_int(
-        env: &[(RvVarLocation, Val)],
-        loc: &RvVarLocation,
-    ) -> i64 {
+    fn lookup_int(env: &[(RvVarLocation, Val)], loc: &RvVarLocation) -> i64 {
         match lookup(env, loc) {
             Val::Int(i) => i,
             Val::Float(_) => {
@@ -573,21 +398,14 @@ mod tests {
         }
     }
 
-    fn lookup_float(
-        env: &[(RvVarLocation, Val)],
-        loc: &RvVarLocation,
-    ) -> f64 {
+    fn lookup_float(env: &[(RvVarLocation, Val)], loc: &RvVarLocation) -> f64 {
         match lookup(env, loc) {
             Val::Float(f) => f,
             Val::Int(_) => panic!("expected float value at {loc}"),
         }
     }
 
-    fn store(
-        env: &mut Vec<(RvVarLocation, Val)>,
-        loc: &RvVarLocation,
-        v: Val,
-    ) {
+    fn store(env: &mut Vec<(RvVarLocation, Val)>, loc: &RvVarLocation, v: Val) {
         if let Some(pair) = env.iter_mut().find(|(l, _)| l == loc) {
             pair.1 = v;
         } else {
@@ -595,19 +413,14 @@ mod tests {
         }
     }
 
-    fn exec_instr(
-        instr: &RvVarInstr,
-        env: &mut Vec<(RvVarLocation, Val)>,
-    ) {
+    fn exec_instr(instr: &RvVarInstr, env: &mut Vec<(RvVarLocation, Val)>) {
         match instr {
             RvVarInstr::Addi { rd, rs1, imm } => {
-                let v = lookup_int(env, rs1)
-                    .wrapping_add(imm.to_i16() as i64);
+                let v = lookup_int(env, rs1).wrapping_add(imm.to_i16() as i64);
                 store(env, rd, Val::Int(v));
             },
             RvVarInstr::Addiw { rd, rs1, imm } => {
-                let v = lookup_int(env, rs1)
-                    .wrapping_add(imm.to_i16() as i64);
+                let v = lookup_int(env, rs1).wrapping_add(imm.to_i16() as i64);
                 store(env, rd, Val::Int(sext(v, 32)));
             },
             RvVarInstr::Slli { rd, rs1, shamt } => {
@@ -619,18 +432,15 @@ mod tests {
                 store(env, rd, Val::Int(v));
             },
             RvVarInstr::Add { rd, rs1, rs2 } => {
-                let v = lookup_int(env, rs1)
-                    .wrapping_add(lookup_int(env, rs2));
+                let v = lookup_int(env, rs1).wrapping_add(lookup_int(env, rs2));
                 store(env, rd, Val::Int(v));
             },
             RvVarInstr::Sub { rd, rs1, rs2 } => {
-                let v = lookup_int(env, rs1)
-                    .wrapping_sub(lookup_int(env, rs2));
+                let v = lookup_int(env, rs1).wrapping_sub(lookup_int(env, rs2));
                 store(env, rd, Val::Int(v));
             },
             RvVarInstr::Mul { rd, rs1, rs2 } => {
-                let v = lookup_int(env, rs1)
-                    .wrapping_mul(lookup_int(env, rs2));
+                let v = lookup_int(env, rs1).wrapping_mul(lookup_int(env, rs2));
                 store(env, rd, Val::Int(v));
             },
             RvVarInstr::Div { rd, rs1, rs2 } => {
@@ -640,8 +450,7 @@ mod tests {
                 store(env, rd, Val::Int(v));
             },
             RvVarInstr::Slt { rd, rs1, rs2 } => {
-                let v = (lookup_int(env, rs1) < lookup_int(env, rs2))
-                    as i64;
+                let v = (lookup_int(env, rs1) < lookup_int(env, rs2)) as i64;
                 store(env, rd, Val::Int(v));
             },
             RvVarInstr::Sltu { rd, rs1, rs2 } => {
@@ -667,41 +476,31 @@ mod tests {
                 store(env, rd, Val::Int(v));
             },
             RvVarInstr::FaddD { rd, rs1, rs2, .. } => {
-                let v =
-                    lookup_float(env, rs1) + lookup_float(env, rs2);
+                let v = lookup_float(env, rs1) + lookup_float(env, rs2);
                 store(env, rd, Val::Float(v));
             },
             RvVarInstr::FsubD { rd, rs1, rs2, .. } => {
-                let v =
-                    lookup_float(env, rs1) - lookup_float(env, rs2);
+                let v = lookup_float(env, rs1) - lookup_float(env, rs2);
                 store(env, rd, Val::Float(v));
             },
             RvVarInstr::FmulD { rd, rs1, rs2, .. } => {
-                let v =
-                    lookup_float(env, rs1) * lookup_float(env, rs2);
+                let v = lookup_float(env, rs1) * lookup_float(env, rs2);
                 store(env, rd, Val::Float(v));
             },
             RvVarInstr::FdivD { rd, rs1, rs2, .. } => {
-                let v =
-                    lookup_float(env, rs1) / lookup_float(env, rs2);
+                let v = lookup_float(env, rs1) / lookup_float(env, rs2);
                 store(env, rd, Val::Float(v));
             },
             RvVarInstr::FeqD { rd, rs1, rs2 } => {
-                let v = (lookup_float(env, rs1)
-                    == lookup_float(env, rs2))
-                    as i64;
+                let v = (lookup_float(env, rs1) == lookup_float(env, rs2)) as i64;
                 store(env, rd, Val::Int(v));
             },
             RvVarInstr::FltD { rd, rs1, rs2 } => {
-                let v = (lookup_float(env, rs1)
-                    < lookup_float(env, rs2))
-                    as i64;
+                let v = (lookup_float(env, rs1) < lookup_float(env, rs2)) as i64;
                 store(env, rd, Val::Int(v));
             },
             RvVarInstr::FleD { rd, rs1, rs2 } => {
-                let v = (lookup_float(env, rs1)
-                    <= lookup_float(env, rs2))
-                    as i64;
+                let v = (lookup_float(env, rs1) <= lookup_float(env, rs2)) as i64;
                 store(env, rd, Val::Int(v));
             },
             RvVarInstr::FmvDX { rd, rs1 } => {
@@ -718,23 +517,16 @@ mod tests {
                 let b = lookup_float(env, rs2);
                 store(env, rd, Val::Float(a.abs().copysign(-b)));
             },
-            _ => panic!(
-                "unexpected instruction in interpreter: {instr:?}"
-            ),
+            _ => panic!("unexpected instruction in interpreter: {instr:?}"),
         }
     }
 
     fn read_result(env: &[(RvVarLocation, Val)]) -> Val {
-        if env.iter().rev().any(|(l, _)| l == &fa0()) {
-            lookup(env, &fa0())
-        } else {
-            lookup(env, &a0())
-        }
+        if env.iter().rev().any(|(l, _)| l == &fa0()) { lookup(env, &fa0()) } else { lookup(env, &a0()) }
     }
 
     fn interpret(prog: &RvVarProgram) -> Val {
-        let mut env: Vec<(RvVarLocation, Val)> =
-            vec![(zero(), Val::Int(0))];
+        let mut env: Vec<(RvVarLocation, Val)> = vec![(zero(), Val::Int(0))];
         let mut pc = 0usize;
         loop {
             let block = &prog.blocks[pc];
@@ -745,15 +537,9 @@ mod tests {
                         return read_result(&env);
                     },
                     RvVarInstr::Beq { rs1, rs2, label } => {
-                        let taken = lookup_int(&env, rs1)
-                            == lookup_int(&env, rs2);
+                        let taken = lookup_int(&env, rs1) == lookup_int(&env, rs2);
                         pc = if taken {
-                            prog.blocks
-                                .iter()
-                                .position(|b| {
-                                    b.name.name == label.name
-                                })
-                                .unwrap()
+                            prog.blocks.iter().position(|b| b.name.name == label.name).unwrap()
                         } else {
                             pc + 1
                         };
@@ -771,8 +557,7 @@ mod tests {
 
     fn run_tail(tail: CTail) -> Val {
         let mut gensym = Gensym::new();
-        let entry =
-            RvVarBasicBlock::new(Label::new("entry".to_string()));
+        let entry = RvVarBasicBlock::new(Label::new("entry".to_string()));
         let mut prog = RvVarProgram::new();
         select_tail(tail, &mut gensym, entry, &mut prog);
         interpret(&prog)
@@ -832,404 +617,182 @@ mod tests {
 
     #[test]
     fn int_add() {
-        assert_eq!(
-            run_expr_int(c_binop(BinOp::Add, c_int(1), c_int(2))),
-            3
-        );
+        assert_eq!(run_expr_int(c_binop(BinOp::Add, c_int(1), c_int(2))), 3);
     }
 
     #[test]
     fn int_sub() {
-        assert_eq!(
-            run_expr_int(c_binop(BinOp::Sub, c_int(10), c_int(3))),
-            7
-        );
+        assert_eq!(run_expr_int(c_binop(BinOp::Sub, c_int(10), c_int(3))), 7);
     }
 
     #[test]
     fn int_mul() {
-        assert_eq!(
-            run_expr_int(c_binop(BinOp::Mul, c_int(6), c_int(7))),
-            42
-        );
+        assert_eq!(run_expr_int(c_binop(BinOp::Mul, c_int(6), c_int(7))), 42);
     }
 
     #[test]
     fn int_div() {
-        assert_eq!(
-            run_expr_int(c_binop(BinOp::Div, c_int(8), c_int(2))),
-            4
-        );
+        assert_eq!(run_expr_int(c_binop(BinOp::Div, c_int(8), c_int(2))), 4);
     }
 
     #[test]
     fn int_div_truncates_toward_zero() {
-        assert_eq!(
-            run_expr_int(c_binop(BinOp::Div, c_int(7), c_int(2))),
-            3
-        );
-        assert_eq!(
-            run_expr_int(c_binop(BinOp::Div, c_int(-7), c_int(2))),
-            -3
-        );
+        assert_eq!(run_expr_int(c_binop(BinOp::Div, c_int(7), c_int(2))), 3);
+        assert_eq!(run_expr_int(c_binop(BinOp::Div, c_int(-7), c_int(2))), -3);
     }
 
     #[test]
     fn int_unary_neg() {
-        assert_eq!(
-            run_expr_int(CExpr::UnaryOp(UnaryOp::Neg, c_int(5))),
-            -5
-        );
+        assert_eq!(run_expr_int(CExpr::UnaryOp(UnaryOp::Neg, c_int(5))), -5);
     }
 
     // --- 浮点加减乘除 ---
 
     #[test]
     fn float_add() {
-        assert_eq!(
-            run_expr_float(c_binop(
-                BinOp::Add,
-                c_float(1.5),
-                c_float(2.5)
-            )),
-            4.0
-        );
+        assert_eq!(run_expr_float(c_binop(BinOp::Add, c_float(1.5), c_float(2.5))), 4.0);
     }
 
     #[test]
     fn float_sub() {
-        assert_eq!(
-            run_expr_float(c_binop(
-                BinOp::Sub,
-                c_float(5.0),
-                c_float(1.5)
-            )),
-            3.5
-        );
+        assert_eq!(run_expr_float(c_binop(BinOp::Sub, c_float(5.0), c_float(1.5))), 3.5);
     }
 
     #[test]
     fn float_mul() {
-        assert_eq!(
-            run_expr_float(c_binop(
-                BinOp::Mul,
-                c_float(2.0),
-                c_float(3.0)
-            )),
-            6.0
-        );
+        assert_eq!(run_expr_float(c_binop(BinOp::Mul, c_float(2.0), c_float(3.0))), 6.0);
     }
 
     #[test]
     fn float_div() {
-        assert_eq!(
-            run_expr_float(c_binop(
-                BinOp::Div,
-                c_float(6.0),
-                c_float(2.0)
-            )),
-            3.0
-        );
+        assert_eq!(run_expr_float(c_binop(BinOp::Div, c_float(6.0), c_float(2.0))), 3.0);
     }
 
     #[test]
     fn float_unary_neg() {
-        assert_eq!(
-            run_expr_float(CExpr::UnaryOp(
-                UnaryOp::Neg,
-                c_float(1.5)
-            )),
-            -1.5
-        );
+        assert_eq!(run_expr_float(CExpr::UnaryOp(UnaryOp::Neg, c_float(1.5))), -1.5);
     }
 
     // --- 整数比较 ---
 
     #[test]
     fn int_lt() {
-        assert_eq!(
-            run_expr_int(c_binop(BinOp::Lt, c_int(1), c_int(2))),
-            1
-        );
-        assert_eq!(
-            run_expr_int(c_binop(BinOp::Lt, c_int(2), c_int(1))),
-            0
-        );
+        assert_eq!(run_expr_int(c_binop(BinOp::Lt, c_int(1), c_int(2))), 1);
+        assert_eq!(run_expr_int(c_binop(BinOp::Lt, c_int(2), c_int(1))), 0);
     }
 
     #[test]
     fn int_gt() {
-        assert_eq!(
-            run_expr_int(c_binop(BinOp::Gt, c_int(2), c_int(1))),
-            1
-        );
-        assert_eq!(
-            run_expr_int(c_binop(BinOp::Gt, c_int(1), c_int(2))),
-            0
-        );
+        assert_eq!(run_expr_int(c_binop(BinOp::Gt, c_int(2), c_int(1))), 1);
+        assert_eq!(run_expr_int(c_binop(BinOp::Gt, c_int(1), c_int(2))), 0);
     }
 
     #[test]
     fn int_leq() {
-        assert_eq!(
-            run_expr_int(c_binop(BinOp::Leq, c_int(1), c_int(1))),
-            1
-        );
-        assert_eq!(
-            run_expr_int(c_binop(BinOp::Leq, c_int(2), c_int(1))),
-            0
-        );
+        assert_eq!(run_expr_int(c_binop(BinOp::Leq, c_int(1), c_int(1))), 1);
+        assert_eq!(run_expr_int(c_binop(BinOp::Leq, c_int(2), c_int(1))), 0);
     }
 
     #[test]
     fn int_geq() {
-        assert_eq!(
-            run_expr_int(c_binop(BinOp::Geq, c_int(2), c_int(2))),
-            1
-        );
-        assert_eq!(
-            run_expr_int(c_binop(BinOp::Geq, c_int(1), c_int(2))),
-            0
-        );
+        assert_eq!(run_expr_int(c_binop(BinOp::Geq, c_int(2), c_int(2))), 1);
+        assert_eq!(run_expr_int(c_binop(BinOp::Geq, c_int(1), c_int(2))), 0);
     }
 
     #[test]
     fn int_eq() {
-        assert_eq!(
-            run_expr_int(c_binop(BinOp::Eq, c_int(1), c_int(1))),
-            1
-        );
-        assert_eq!(
-            run_expr_int(c_binop(BinOp::Eq, c_int(1), c_int(2))),
-            0
-        );
+        assert_eq!(run_expr_int(c_binop(BinOp::Eq, c_int(1), c_int(1))), 1);
+        assert_eq!(run_expr_int(c_binop(BinOp::Eq, c_int(1), c_int(2))), 0);
     }
 
     #[test]
     fn int_neq() {
-        assert_eq!(
-            run_expr_int(c_binop(BinOp::Neq, c_int(1), c_int(2))),
-            1
-        );
-        assert_eq!(
-            run_expr_int(c_binop(BinOp::Neq, c_int(1), c_int(1))),
-            0
-        );
+        assert_eq!(run_expr_int(c_binop(BinOp::Neq, c_int(1), c_int(2))), 1);
+        assert_eq!(run_expr_int(c_binop(BinOp::Neq, c_int(1), c_int(1))), 0);
     }
 
     // --- 浮点比较 ---
 
     #[test]
     fn float_lt() {
-        assert_eq!(
-            run_expr_int(c_binop(
-                BinOp::Lt,
-                c_float(1.0),
-                c_float(2.0)
-            )),
-            1
-        );
-        assert_eq!(
-            run_expr_int(c_binop(
-                BinOp::Lt,
-                c_float(2.0),
-                c_float(1.0)
-            )),
-            0
-        );
+        assert_eq!(run_expr_int(c_binop(BinOp::Lt, c_float(1.0), c_float(2.0))), 1);
+        assert_eq!(run_expr_int(c_binop(BinOp::Lt, c_float(2.0), c_float(1.0))), 0);
     }
 
     #[test]
     fn float_gt() {
-        assert_eq!(
-            run_expr_int(c_binop(
-                BinOp::Gt,
-                c_float(2.0),
-                c_float(1.0)
-            )),
-            1
-        );
-        assert_eq!(
-            run_expr_int(c_binop(
-                BinOp::Gt,
-                c_float(1.0),
-                c_float(2.0)
-            )),
-            0
-        );
+        assert_eq!(run_expr_int(c_binop(BinOp::Gt, c_float(2.0), c_float(1.0))), 1);
+        assert_eq!(run_expr_int(c_binop(BinOp::Gt, c_float(1.0), c_float(2.0))), 0);
     }
 
     #[test]
     fn float_leq() {
-        assert_eq!(
-            run_expr_int(c_binop(
-                BinOp::Leq,
-                c_float(1.0),
-                c_float(1.0)
-            )),
-            1
-        );
-        assert_eq!(
-            run_expr_int(c_binop(
-                BinOp::Leq,
-                c_float(2.0),
-                c_float(1.0)
-            )),
-            0
-        );
+        assert_eq!(run_expr_int(c_binop(BinOp::Leq, c_float(1.0), c_float(1.0))), 1);
+        assert_eq!(run_expr_int(c_binop(BinOp::Leq, c_float(2.0), c_float(1.0))), 0);
     }
 
     #[test]
     fn float_geq() {
-        assert_eq!(
-            run_expr_int(c_binop(
-                BinOp::Geq,
-                c_float(2.0),
-                c_float(2.0)
-            )),
-            1
-        );
-        assert_eq!(
-            run_expr_int(c_binop(
-                BinOp::Geq,
-                c_float(1.0),
-                c_float(2.0)
-            )),
-            0
-        );
+        assert_eq!(run_expr_int(c_binop(BinOp::Geq, c_float(2.0), c_float(2.0))), 1);
+        assert_eq!(run_expr_int(c_binop(BinOp::Geq, c_float(1.0), c_float(2.0))), 0);
     }
 
     #[test]
     fn float_eq() {
-        assert_eq!(
-            run_expr_int(c_binop(
-                BinOp::Eq,
-                c_float(1.0),
-                c_float(1.0)
-            )),
-            1
-        );
-        assert_eq!(
-            run_expr_int(c_binop(
-                BinOp::Eq,
-                c_float(1.0),
-                c_float(2.0)
-            )),
-            0
-        );
+        assert_eq!(run_expr_int(c_binop(BinOp::Eq, c_float(1.0), c_float(1.0))), 1);
+        assert_eq!(run_expr_int(c_binop(BinOp::Eq, c_float(1.0), c_float(2.0))), 0);
     }
 
     // --- 逻辑运算 ---
 
     #[test]
     fn logic_and() {
-        assert_eq!(
-            run_expr_int(c_binop(
-                BinOp::And,
-                c_bool(true),
-                c_bool(false)
-            )),
-            0
-        );
-        assert_eq!(
-            run_expr_int(c_binop(
-                BinOp::And,
-                c_bool(true),
-                c_bool(true)
-            )),
-            1
-        );
+        assert_eq!(run_expr_int(c_binop(BinOp::And, c_bool(true), c_bool(false))), 0);
+        assert_eq!(run_expr_int(c_binop(BinOp::And, c_bool(true), c_bool(true))), 1);
     }
 
     #[test]
     fn logic_or() {
-        assert_eq!(
-            run_expr_int(c_binop(
-                BinOp::Or,
-                c_bool(false),
-                c_bool(true)
-            )),
-            1
-        );
-        assert_eq!(
-            run_expr_int(c_binop(
-                BinOp::Or,
-                c_bool(false),
-                c_bool(false)
-            )),
-            0
-        );
+        assert_eq!(run_expr_int(c_binop(BinOp::Or, c_bool(false), c_bool(true))), 1);
+        assert_eq!(run_expr_int(c_binop(BinOp::Or, c_bool(false), c_bool(false))), 0);
     }
 
     #[test]
     fn logic_not() {
-        assert_eq!(
-            run_expr_int(CExpr::UnaryOp(UnaryOp::Not, c_bool(true))),
-            0
-        );
-        assert_eq!(
-            run_expr_int(CExpr::UnaryOp(UnaryOp::Not, c_bool(false))),
-            1
-        );
+        assert_eq!(run_expr_int(CExpr::UnaryOp(UnaryOp::Not, c_bool(true))), 0);
+        assert_eq!(run_expr_int(CExpr::UnaryOp(UnaryOp::Not, c_bool(false))), 1);
     }
 
     // --- if ---
 
     #[test]
     fn if_true_branch() {
-        let tail = c_if(
-            c_bool(true),
-            c_ret(c_atom(c_int(1))),
-            c_ret(c_atom(c_int(2))),
-        );
+        let tail = c_if(c_bool(true), c_ret(c_atom(c_int(1))), c_ret(c_atom(c_int(2))));
         assert_eq!(run_tail(tail), Val::Int(1));
     }
 
     #[test]
     fn if_false_branch() {
-        let tail = c_if(
-            c_bool(false),
-            c_ret(c_atom(c_int(1))),
-            c_ret(c_atom(c_int(2))),
-        );
+        let tail = c_if(c_bool(false), c_ret(c_atom(c_int(1))), c_ret(c_atom(c_int(2))));
         assert_eq!(run_tail(tail), Val::Int(2));
     }
 
     #[test]
     fn if_float_result() {
-        let tail = c_if(
-            c_bool(true),
-            c_ret(c_atom(c_float(1.5))),
-            c_ret(c_atom(c_float(2.5))),
-        );
+        let tail = c_if(c_bool(true), c_ret(c_atom(c_float(1.5))), c_ret(c_atom(c_float(2.5))));
         assert_eq!(run_tail(tail), Val::Float(1.5));
     }
 
     // x > 0 ? x : -x  （等价于绝对值）
     fn abs_via_if(x: i64) -> Val {
         let tail = c_seq(
-            CStmt::Assign(
-                "x".to_string(),
-                c_atom(c_int(x)),
-                Type::Int,
-            ),
+            CStmt::Assign("x".to_string(), c_atom(c_int(x)), Type::Int),
             c_seq(
-                CStmt::Assign(
-                    "c".to_string(),
-                    c_binop(
-                        BinOp::Gt,
-                        c_var("x", Type::Int),
-                        c_int(0),
-                    ),
-                    Type::Bool,
-                ),
+                CStmt::Assign("c".to_string(), c_binop(BinOp::Gt, c_var("x", Type::Int), c_int(0)), Type::Bool),
                 c_if(
                     c_var("c", Type::Bool),
                     c_ret(c_atom(c_var("x", Type::Int))),
-                    c_ret(CExpr::UnaryOp(
-                        UnaryOp::Neg,
-                        c_var("x", Type::Int),
-                    )),
+                    c_ret(CExpr::UnaryOp(UnaryOp::Neg, c_var("x", Type::Int))),
                 ),
             ),
         );
@@ -1252,39 +815,21 @@ mod tests {
 
     #[test]
     fn return_bool() {
-        assert_eq!(
-            run_tail(c_ret(c_atom(c_bool(true)))),
-            Val::Int(1)
-        );
+        assert_eq!(run_tail(c_ret(c_atom(c_bool(true)))), Val::Int(1));
     }
 
     #[test]
     fn return_float() {
-        assert_eq!(
-            run_tail(c_ret(c_atom(c_float(3.14)))),
-            Val::Float(3.14)
-        );
+        assert_eq!(run_tail(c_ret(c_atom(c_float(3.14)))), Val::Float(3.14));
     }
 
     #[test]
     fn return_composite_expr() {
         // (1 + 2) * 3 = 9
         let tail = c_seq(
-            CStmt::Assign(
-                "a".to_string(),
-                c_binop(BinOp::Add, c_int(1), c_int(2)),
-                Type::Int,
-            ),
+            CStmt::Assign("a".to_string(), c_binop(BinOp::Add, c_int(1), c_int(2)), Type::Int),
             c_seq(
-                CStmt::Assign(
-                    "b".to_string(),
-                    c_binop(
-                        BinOp::Mul,
-                        c_var("a", Type::Int),
-                        c_int(3),
-                    ),
-                    Type::Int,
-                ),
+                CStmt::Assign("b".to_string(), c_binop(BinOp::Mul, c_var("a", Type::Int), c_int(3)), Type::Int),
                 c_ret(c_atom(c_var("b", Type::Int))),
             ),
         );

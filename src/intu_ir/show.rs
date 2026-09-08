@@ -15,22 +15,14 @@ mod module_show {
         fn show(&self, types: &Types) -> String {
             let mut parts: Vec<String> = Vec::new();
 
-            let header = format!(
-                "source_filename = \"{}\"",
-                self.source_file_name
-            );
+            let header = format!("source_filename = \"{}\"", self.source_file_name);
 
             parts.push(header);
 
-            let struct_names: Vec<String> =
-                self.types.all_struct_names().cloned().collect();
+            let struct_names: Vec<String> = self.types.all_struct_names().cloned().collect();
             for name in &struct_names {
                 if let Some(def) = self.types.named_struct_def(name) {
-                    parts.push(format!(
-                        "%{} = {}",
-                        name,
-                        def.show(types)
-                    ));
+                    parts.push(format!("%{} = {}", name, def.show(types)));
                 }
             }
 
@@ -57,12 +49,7 @@ mod module_show {
             if self.addr_space != 0 {
                 write!(s, "addrspace({}) ", self.addr_space).unwrap();
             }
-            write!(
-                s,
-                "{} ",
-                if self.is_constant { "constant" } else { "global" }
-            )
-            .unwrap();
+            write!(s, "{} ", if self.is_constant { "constant" } else { "global" }).unwrap();
             write!(s, "{}", self.ty.show(types)).unwrap();
             if let Some(ref init) = self.initializer {
                 write!(s, " {}", init.show(types)).unwrap();
@@ -85,13 +72,7 @@ mod function_show {
             let mut s = String::new();
             write!(s, "define ").unwrap();
 
-            write!(
-                s,
-                "{} @{}(",
-                self.return_type.show(types),
-                self.name
-            )
-            .unwrap();
+            write!(s, "{} @{}(", self.return_type.show(types), self.name).unwrap();
             for (i, param) in self.parameters.iter().enumerate() {
                 if i > 0 {
                     write!(s, ", ").unwrap();
@@ -104,12 +85,8 @@ mod function_show {
             writeln!(s, " {{").unwrap();
             for bb in &self.basic_blocks {
                 match &bb.name {
-                    Name::Name(name) => {
-                        write!(s, "{}:\n", name).unwrap()
-                    },
-                    Name::Number(num) => {
-                        write!(s, "{}:\n", num).unwrap()
-                    },
+                    Name::Name(name) => write!(s, "{}:\n", name).unwrap(),
+                    Name::Number(num) => write!(s, "{}:\n", num).unwrap(),
                 }
                 for instr in &bb.instrs {
                     writeln!(s, "  {}", instr.show(types)).unwrap();
@@ -142,13 +119,7 @@ mod function_show {
     impl Show for function::Parameter {
         fn show(&self, types: &Types) -> String {
             let mut s = String::new();
-            write!(
-                s,
-                "{} {}",
-                self.ty.show(types),
-                self.name.show(types)
-            )
-            .unwrap();
+            write!(s, "{} {}", self.ty.show(types), self.name.show(types)).unwrap();
             s
         }
     }
@@ -166,12 +137,8 @@ mod operand_show {
         fn show(&self, types: &Types) -> String {
             let mut s = String::new();
             match self {
-                Operand::LocalOperand { name, ty: _ } => {
-                    write!(s, "{}", name.show(types)).unwrap()
-                },
-                Operand::ConstantOperand(cref) => {
-                    write!(s, "{}", cref.show(types)).unwrap()
-                },
+                Operand::LocalOperand { name, ty: _ } => write!(s, "{}", name.show(types)).unwrap(),
+                Operand::ConstantOperand(cref) => write!(s, "{}", cref.show(types)).unwrap(),
             }
             s
         }
@@ -187,9 +154,7 @@ mod instruction_show {
     impl Show for instruction::FPPredicate {
         fn show(&self, _types: &Types) -> String {
             match self {
-                instruction::FPPredicate::False => {
-                    "false".to_string()
-                },
+                instruction::FPPredicate::False => "false".to_string(),
                 instruction::FPPredicate::OEQ => "oeq".to_string(),
                 instruction::FPPredicate::OGT => "ogt".to_string(),
                 instruction::FPPredicate::OGE => "oge".to_string(),
@@ -234,14 +199,7 @@ mod instruction_show {
                     let ty = types.type_of(operand0);
                     write!(s, "{} = add", dest.show(types)).unwrap();
 
-                    write!(
-                        s,
-                        " {} {}, {}",
-                        ty.show(types),
-                        operand0.show(types),
-                        operand1.show(types)
-                    )
-                    .unwrap();
+                    write!(s, " {} {}, {}", ty.show(types), operand0.show(types), operand1.show(types)).unwrap();
                     s
                 },
                 Instruction::Sub { operand0, operand1, dest } => {
@@ -249,14 +207,7 @@ mod instruction_show {
                     let ty = types.type_of(operand0);
                     write!(s, "{} = sub", dest.show(types)).unwrap();
 
-                    write!(
-                        s,
-                        " {} {}, {}",
-                        ty.show(types),
-                        operand0.show(types),
-                        operand1.show(types)
-                    )
-                    .unwrap();
+                    write!(s, " {} {}, {}", ty.show(types), operand0.show(types), operand1.show(types)).unwrap();
                     s
                 },
                 Instruction::Mul { operand0, operand1, dest } => {
@@ -264,14 +215,7 @@ mod instruction_show {
                     let ty = types.type_of(operand0);
                     write!(s, "{} = mul", dest.show(types)).unwrap();
 
-                    write!(
-                        s,
-                        " {} {}, {}",
-                        ty.show(types),
-                        operand0.show(types),
-                        operand1.show(types)
-                    )
-                    .unwrap();
+                    write!(s, " {} {}, {}", ty.show(types), operand0.show(types), operand1.show(types)).unwrap();
                     s
                 },
                 Instruction::UDiv { operand0, operand1, dest } => {
@@ -279,14 +223,7 @@ mod instruction_show {
                     let ty = types.type_of(operand0);
                     write!(s, "{} = udiv", dest.show(types)).unwrap();
 
-                    write!(
-                        s,
-                        " {} {}, {}",
-                        ty.show(types),
-                        operand0.show(types),
-                        operand1.show(types)
-                    )
-                    .unwrap();
+                    write!(s, " {} {}, {}", ty.show(types), operand0.show(types), operand1.show(types)).unwrap();
                     s
                 },
                 Instruction::SDiv { operand0, operand1, dest } => {
@@ -294,14 +231,7 @@ mod instruction_show {
                     let ty = types.type_of(operand0);
                     write!(s, "{} = sdiv", dest.show(types)).unwrap();
 
-                    write!(
-                        s,
-                        " {} {}, {}",
-                        ty.show(types),
-                        operand0.show(types),
-                        operand1.show(types)
-                    )
-                    .unwrap();
+                    write!(s, " {} {}, {}", ty.show(types), operand0.show(types), operand1.show(types)).unwrap();
                     s
                 },
                 Instruction::URem { operand0, operand1, dest } => {
@@ -351,14 +281,7 @@ mod instruction_show {
                     let ty = types.type_of(operand0);
                     write!(s, "{} = or", dest.show(types)).unwrap();
 
-                    write!(
-                        s,
-                        " {} {}, {}",
-                        ty.show(types),
-                        operand0.show(types),
-                        operand1.show(types)
-                    )
-                    .unwrap();
+                    write!(s, " {} {}, {}", ty.show(types), operand0.show(types), operand1.show(types)).unwrap();
                     s
                 },
                 Instruction::Xor { operand0, operand1, dest } => {
@@ -380,14 +303,7 @@ mod instruction_show {
                     let ty = types.type_of(operand0);
                     write!(s, "{} = shl", dest.show(types)).unwrap();
 
-                    write!(
-                        s,
-                        " {} {}, {}",
-                        ty.show(types),
-                        operand0.show(types),
-                        operand1.show(types)
-                    )
-                    .unwrap();
+                    write!(s, " {} {}, {}", ty.show(types), operand0.show(types), operand1.show(types)).unwrap();
                     s
                 },
                 Instruction::LShr { operand0, operand1, dest } => {
@@ -395,14 +311,7 @@ mod instruction_show {
                     let ty = types.type_of(operand0);
                     write!(s, "{} = lshr", dest.show(types)).unwrap();
 
-                    write!(
-                        s,
-                        " {} {}, {}",
-                        ty.show(types),
-                        operand0.show(types),
-                        operand1.show(types)
-                    )
-                    .unwrap();
+                    write!(s, " {} {}, {}", ty.show(types), operand0.show(types), operand1.show(types)).unwrap();
                     s
                 },
                 Instruction::AShr { operand0, operand1, dest } => {
@@ -410,14 +319,7 @@ mod instruction_show {
                     let ty = types.type_of(operand0);
                     write!(s, "{} = ashr", dest.show(types)).unwrap();
 
-                    write!(
-                        s,
-                        " {} {}, {}",
-                        ty.show(types),
-                        operand0.show(types),
-                        operand1.show(types)
-                    )
-                    .unwrap();
+                    write!(s, " {} {}, {}", ty.show(types), operand0.show(types), operand1.show(types)).unwrap();
                     s
                 },
                 Instruction::FAdd { operand0, operand1, dest } => {
@@ -493,52 +395,22 @@ mod instruction_show {
                 Instruction::FNeg { operand, dest } => {
                     let mut s = String::new();
                     let ty = types.type_of(operand);
-                    write!(
-                        s,
-                        "{} = fneg {} {}",
-                        dest.show(types),
-                        ty.show(types),
-                        operand.show(types)
-                    )
-                    .unwrap();
+                    write!(s, "{} = fneg {} {}", dest.show(types), ty.show(types), operand.show(types)).unwrap();
                     s
                 },
-                Instruction::Alloca {
-                    allocated_type,
-                    num_elements,
-                    dest,
-                    alignment,
-                } => {
+                Instruction::Alloca { allocated_type, num_elements, dest, alignment } => {
                     let mut s = String::new();
-                    write!(
-                        s,
-                        "{} = alloca {}",
-                        dest.show(types),
-                        allocated_type.show(types)
-                    )
-                    .unwrap();
+                    write!(s, "{} = alloca {}", dest.show(types), allocated_type.show(types)).unwrap();
 
-                    write!(
-                        s,
-                        ", {} {}",
-                        types.type_of(num_elements).show(types),
-                        num_elements.show(types)
-                    )
-                    .unwrap();
+                    write!(s, ", {} {}", types.type_of(num_elements).show(types), num_elements.show(types)).unwrap();
 
                     write!(s, ", align {}", alignment).unwrap();
 
                     s
                 },
-                Instruction::Load {
-                    address,
-                    dest,
-                    loaded_ty,
-                    alignment,
-                } => {
+                Instruction::Load { address, dest, loaded_ty, alignment } => {
                     let mut s = String::new();
-                    write!(s, "{} = load ", dest.show(types))
-                        .unwrap();
+                    write!(s, "{} = load ", dest.show(types)).unwrap();
                     write!(
                         s,
                         "{}, {} {}",
@@ -567,19 +439,9 @@ mod instruction_show {
                     write!(s, ", align {}", alignment).unwrap();
                     s
                 },
-                Instruction::GetElementPtr {
-                    address,
-                    indices,
-                    dest,
-                    source_element_type,
-                } => {
+                Instruction::GetElementPtr { address, indices, dest, source_element_type } => {
                     let mut s = String::new();
-                    write!(
-                        s,
-                        "{} = getelementptr ",
-                        dest.show(types)
-                    )
-                    .unwrap();
+                    write!(s, "{} = getelementptr ", dest.show(types)).unwrap();
                     write!(
                         s,
                         "{}, {} {}",
@@ -589,13 +451,7 @@ mod instruction_show {
                     )
                     .unwrap();
                     for idx in indices {
-                        write!(
-                            s,
-                            ", {} {}",
-                            types.type_of(idx).show(types),
-                            idx.show(types)
-                        )
-                        .unwrap();
+                        write!(s, ", {} {}", types.type_of(idx).show(types), idx.show(types)).unwrap();
                     }
                     s
                 },
@@ -618,14 +474,7 @@ mod instruction_show {
                     let from_ty = types.type_of(operand);
                     write!(s, "{} = zext", dest.show(types)).unwrap();
 
-                    write!(
-                        s,
-                        " {} {} to {}",
-                        from_ty.show(types),
-                        operand.show(types),
-                        to_type.show(types)
-                    )
-                    .unwrap();
+                    write!(s, " {} {} to {}", from_ty.show(types), operand.show(types), to_type.show(types)).unwrap();
                     s
                 },
                 Instruction::SExt { operand, to_type, dest } => {
@@ -768,12 +617,7 @@ mod instruction_show {
                     .unwrap();
                     s
                 },
-                Instruction::ICmp {
-                    predicate,
-                    operand0,
-                    operand1,
-                    dest,
-                } => {
+                Instruction::ICmp { predicate, operand0, operand1, dest } => {
                     let mut s = String::new();
                     let ty = types.type_of(operand0);
                     write!(
@@ -788,12 +632,7 @@ mod instruction_show {
                     .unwrap();
                     s
                 },
-                Instruction::FCmp {
-                    predicate,
-                    operand0,
-                    operand1,
-                    dest,
-                } => {
+                Instruction::FCmp { predicate, operand0, operand1, dest } => {
                     let mut s = String::new();
                     let ty = types.type_of(operand0);
                     write!(
@@ -808,13 +647,7 @@ mod instruction_show {
                     .unwrap();
                     s
                 },
-                Instruction::Call {
-                    function,
-                    arguments,
-                    dest,
-                    is_tail_call,
-                    ..
-                } => {
+                Instruction::Call { function, arguments, dest, is_tail_call, .. } => {
                     let mut s = String::new();
                     if let Some(dest) = dest {
                         write!(s, "{} = ", dest.show(types)).unwrap();
@@ -822,32 +655,19 @@ mod instruction_show {
                     if *is_tail_call {
                         write!(s, "tail ").unwrap();
                     }
-                    write!(
-                        s,
-                        "call {}(",
-                        format!(
-                            "{} {}",
-                            types.type_of(self).show(types),
-                            function.show(types)
-                        ),
-                    )
-                    .unwrap();
+                    write!(s, "call {}(", format!("{} {}", types.type_of(self).show(types), function.show(types)),)
+                        .unwrap();
                     for (i, arg) in arguments.iter().enumerate() {
                         if i == arguments.len() - 1 {
                             write!(s, "{}", arg.show(types)).unwrap();
                         } else {
-                            write!(s, "{}, ", arg.show(types))
-                                .unwrap();
+                            write!(s, "{}, ", arg.show(types)).unwrap();
                         }
                     }
                     write!(s, ")").unwrap();
                     s
                 },
-                Instruction::ExtractValue {
-                    aggregate,
-                    indices,
-                    dest,
-                } => {
+                Instruction::ExtractValue { aggregate, indices, dest } => {
                     let mut s = String::new();
                     let agg_ty = types.type_of(aggregate);
                     write!(
@@ -856,9 +676,7 @@ mod instruction_show {
                         dest.show(types),
                         agg_ty.show(types),
                         aggregate.show(types),
-                        indices
-                            .first()
-                            .expect("ExtractValue with no indices")
+                        indices.first().expect("ExtractValue with no indices")
                     )
                     .unwrap();
                     for idx in &indices[1..] {
@@ -866,12 +684,7 @@ mod instruction_show {
                     }
                     s
                 },
-                Instruction::InsertValue {
-                    aggregate,
-                    element,
-                    indices,
-                    dest,
-                } => {
+                Instruction::InsertValue { aggregate, element, indices, dest } => {
                     let mut s = String::new();
                     let agg_ty = types.type_of(aggregate);
                     write!(
@@ -881,9 +694,7 @@ mod instruction_show {
                         agg_ty.show(types),
                         aggregate.show(types),
                         element.show(types),
-                        indices
-                            .first()
-                            .expect("InsertValue with no indices")
+                        indices.first().expect("InsertValue with no indices")
                     )
                     .unwrap();
                     for idx in &indices[1..] {
@@ -907,12 +718,8 @@ mod types_show {
         fn show(&self, types: &Types) -> String {
             let mut s = String::new();
             match self {
-                NamedStructDef::Opaque => {
-                    write!(s, "type opaque").unwrap()
-                },
-                NamedStructDef::Defined(ty) => {
-                    write!(s, "type {}", ty.show(types)).unwrap()
-                },
+                NamedStructDef::Opaque => write!(s, "type opaque").unwrap(),
+                NamedStructDef::Defined(ty) => write!(s, "type {}", ty.show(types)).unwrap(),
             };
             s
         }
@@ -925,64 +732,36 @@ mod types_show {
                 types::InstType::IntegerType { bits } => {
                     format!("i{}", bits)
                 },
-                types::InstType::PointerType { .. } => {
-                    "ptr".to_string()
-                },
+                types::InstType::PointerType { .. } => "ptr".to_string(),
                 types::InstType::FPType(fpt) => fpt.show(types),
-                types::InstType::FuncType {
-                    result_type,
-                    param_types,
-                } => {
+                types::InstType::FuncType { result_type, param_types } => {
                     let mut s = String::new();
-                    write!(s, "{} (", result_type.show(types))
-                        .unwrap();
-                    for (i, param_ty) in
-                        param_types.iter().enumerate()
-                    {
+                    write!(s, "{} (", result_type.show(types)).unwrap();
+                    for (i, param_ty) in param_types.iter().enumerate() {
                         if i == param_types.len() - 1 {
-                            write!(s, "{}", param_ty.show(types))
-                                .unwrap();
+                            write!(s, "{}", param_ty.show(types)).unwrap();
                         } else {
-                            write!(s, "{}, ", param_ty.show(types))
-                                .unwrap();
+                            write!(s, "{}, ", param_ty.show(types)).unwrap();
                         }
                     }
 
                     write!(s, ")").unwrap();
                     s
                 },
-                types::InstType::VectorType {
-                    element_type,
-                    num_elements,
-                } => {
-                    format!(
-                        "<{} x {}>",
-                        num_elements,
-                        element_type.show(types)
-                    )
+                types::InstType::VectorType { element_type, num_elements } => {
+                    format!("<{} x {}>", num_elements, element_type.show(types))
                 },
-                types::InstType::ArrayType {
-                    element_type,
-                    num_elements,
-                } => {
-                    format!(
-                        "[{} x {}]",
-                        num_elements,
-                        element_type.show(types)
-                    )
+                types::InstType::ArrayType { element_type, num_elements } => {
+                    format!("[{} x {}]", num_elements, element_type.show(types))
                 },
                 types::InstType::StructType { element_types } => {
                     let mut s = String::new();
                     write!(s, "{{ ").unwrap();
-                    for (i, element_ty) in
-                        element_types.iter().enumerate()
-                    {
+                    for (i, element_ty) in element_types.iter().enumerate() {
                         if i == element_types.len() - 1 {
-                            write!(s, "{}", element_ty.show(types))
-                                .unwrap();
+                            write!(s, "{}", element_ty.show(types)).unwrap();
                         } else {
-                            write!(s, "{}, ", element_ty.show(types))
-                                .unwrap();
+                            write!(s, "{}, ", element_ty.show(types)).unwrap();
                         }
                     }
                     write!(s, " }}").unwrap();
@@ -1033,39 +812,18 @@ mod constant_show {
             match self {
                 constant::Constant::Int { bits, value } => {
                     if *bits == 1 {
-                        if *value == 0 {
-                            write!(s, "false").unwrap()
-                        } else {
-                            write!(s, "true").unwrap()
-                        }
+                        if *value == 0 { write!(s, "false").unwrap() } else { write!(s, "true").unwrap() }
                     } else {
                         match *bits {
-                            16 => write!(
-                                s,
-                                "{}",
-                                (*value & 0xFFFF) as i16
-                            )
-                            .unwrap(),
-                            32 => write!(
-                                s,
-                                "{}",
-                                (*value & 0xFFFF_FFFF) as i32
-                            )
-                            .unwrap(),
-                            64 => write!(s, "{}", *value as i64)
-                                .unwrap(),
+                            16 => write!(s, "{}", (*value & 0xFFFF) as i16).unwrap(),
+                            32 => write!(s, "{}", (*value & 0xFFFF_FFFF) as i32).unwrap(),
+                            64 => write!(s, "{}", *value as i64).unwrap(),
                             _ => write!(s, "{}", value).unwrap(),
                         }
                     }
                 },
-                constant::Constant::Float(f) => {
-                    write!(s, "{}", f.show(types)).unwrap()
-                },
-                constant::Constant::Struct {
-                    name: _,
-                    values,
-                    is_packed,
-                } => {
+                constant::Constant::Float(f) => write!(s, "{}", f.show(types)).unwrap(),
+                constant::Constant::Struct { name: _, values, is_packed } => {
                     if *is_packed {
                         write!(s, "<").unwrap();
                     }
@@ -1074,23 +832,18 @@ mod constant_show {
                         if i == values.len() - 1 {
                             write!(s, "{}", val.show(types)).unwrap();
                         } else {
-                            write!(s, "{}, ", val.show(types))
-                                .unwrap();
+                            write!(s, "{}, ", val.show(types)).unwrap();
                         }
                     }
                     write!(s, " }}").unwrap();
                 },
-                constant::Constant::Array {
-                    element_type: _,
-                    elements,
-                } => {
+                constant::Constant::Array { element_type: _, elements } => {
                     write!(s, "[ ").unwrap();
                     for (i, elt) in elements.iter().enumerate() {
                         if i == elements.len() - 1 {
                             write!(s, "{}", elt.show(types)).unwrap();
                         } else {
-                            write!(s, "{}, ", elt.show(types))
-                                .unwrap();
+                            write!(s, "{}, ", elt.show(types)).unwrap();
                         }
                     }
                     write!(s, " ]").unwrap();
@@ -1101,8 +854,7 @@ mod constant_show {
                         if i == constant_refs.len() - 1 {
                             write!(s, "{}", elt.show(types)).unwrap();
                         } else {
-                            write!(s, "{}, ", elt.show(types))
-                                .unwrap();
+                            write!(s, "{}, ", elt.show(types)).unwrap();
                         }
                     }
                     write!(s, " >").unwrap();
@@ -1129,24 +881,14 @@ mod terminator_show {
                     write!(s, "ret ").unwrap();
                     match return_operand {
                         None => write!(s, "void").unwrap(),
-                        Some(op) => write!(
-                            s,
-                            "{} {}",
-                            types.type_of(op).show(types),
-                            op.show(types)
-                        )
-                        .unwrap(),
+                        Some(op) => write!(s, "{} {}", types.type_of(op).show(types), op.show(types)).unwrap(),
                     }
                     s
                 },
                 Terminator::Br { dest } => {
                     format!("br label {}", dest.show(types))
                 },
-                Terminator::CondBr {
-                    condition,
-                    true_dest,
-                    false_dest,
-                } => {
+                Terminator::CondBr { condition, true_dest, false_dest } => {
                     let mut s = String::new();
                     write!(
                         s,
@@ -1158,10 +900,7 @@ mod terminator_show {
                     .unwrap();
                     s
                 },
-                Terminator::IndirectBr {
-                    operand,
-                    possible_dests,
-                } => {
+                Terminator::IndirectBr { operand, possible_dests } => {
                     let mut s = String::new();
                     write!(
                         s,
@@ -1169,15 +908,12 @@ mod terminator_show {
                         operand.show(types),
                         possible_dests
                             .get(0)
-                            .expect(
-                                "IndirectBr with no possible dests"
-                            )
+                            .expect("IndirectBr with no possible dests")
                             .show(types)
                     )
                     .unwrap();
                     for dest in &possible_dests[1..] {
-                        write!(s, ", label {}", dest.show(types))
-                            .unwrap();
+                        write!(s, ", label {}", dest.show(types)).unwrap();
                     }
                     write!(s, " ]").unwrap();
                     s
@@ -1198,12 +934,8 @@ mod name_show {
         fn show(&self, _types: &Types) -> String {
             let mut s = String::new();
             match self {
-                name::Name::Name(name) => {
-                    write!(s, "%{}", name).unwrap()
-                },
-                name::Name::Number(num) => {
-                    write!(s, "%{}", num).unwrap()
-                },
+                name::Name::Name(name) => write!(s, "%{}", name).unwrap(),
+                name::Name::Number(num) => write!(s, "%{}", num).unwrap(),
             };
             s
         }
@@ -1215,19 +947,13 @@ mod tests {
     use super::Show;
     use crate::intu_ir::basicblock::BasicBlock;
     use crate::intu_ir::constant::{Constant, ConstantRef, Float};
-    use crate::intu_ir::function::{
-        Function, FunctionDeclaration, Parameter,
-    };
-    use crate::intu_ir::instruction::{
-        FPPredicate, Instruction, IntPredicate,
-    };
+    use crate::intu_ir::function::{Function, FunctionDeclaration, Parameter};
+    use crate::intu_ir::instruction::{FPPredicate, Instruction, IntPredicate};
     use crate::intu_ir::module::{GlobalVariable, Module};
     use crate::intu_ir::name::Name;
     use crate::intu_ir::operand::Operand;
     use crate::intu_ir::terminator::Terminator;
-    use crate::intu_ir::types::{
-        FPType, NamedStructDef, TypeRef, Types,
-    };
+    use crate::intu_ir::types::{FPType, NamedStructDef, TypeRef, Types};
 
     fn mk_types() -> Types {
         Types::new()
@@ -1238,22 +964,15 @@ mod tests {
     }
 
     fn mk_const_int(bits: u32, value: u64) -> Operand {
-        Operand::ConstantOperand(ConstantRef::new(Constant::Int {
-            bits,
-            value,
-        }))
+        Operand::ConstantOperand(ConstantRef::new(Constant::Int { bits, value }))
     }
 
     fn mk_const_float_single(v: f32) -> Operand {
-        Operand::ConstantOperand(ConstantRef::new(Constant::Float(
-            Float::Single(v),
-        )))
+        Operand::ConstantOperand(ConstantRef::new(Constant::Float(Float::Single(v))))
     }
 
     fn mk_const_float_double(v: f64) -> Operand {
-        Operand::ConstantOperand(ConstantRef::new(Constant::Float(
-            Float::Double(v),
-        )))
+        Operand::ConstantOperand(ConstantRef::new(Constant::Float(Float::Double(v))))
     }
 
     // ========================= Name =========================
@@ -1327,18 +1046,11 @@ mod tests {
         let void_fn = types.func_type(types.void(), vec![]);
         assert_eq!(show_insttype(&void_fn, &types), "void ()");
 
-        let int_fn = types
-            .func_type(types.i32(), vec![types.i32(), types.i64()]);
+        let int_fn = types.func_type(types.i32(), vec![types.i32(), types.i64()]);
         assert_eq!(show_insttype(&int_fn, &types), "i32 (i32, i64)");
 
-        let multi_param = types.func_type(
-            types.double(),
-            vec![types.single(), types.void()],
-        );
-        assert_eq!(
-            show_insttype(&multi_param, &types),
-            "double (float, void)"
-        );
+        let multi_param = types.func_type(types.double(), vec![types.single(), types.void()]);
+        assert_eq!(show_insttype(&multi_param, &types), "double (float, void)");
     }
 
     #[test]
@@ -1358,11 +1070,7 @@ mod tests {
     #[test]
     fn test_struct_type() {
         let types = mk_types();
-        let s = types.struct_of(vec![
-            types.i32(),
-            types.double(),
-            types.pointer(),
-        ]);
+        let s = types.struct_of(vec![types.i32(), types.double(), types.pointer()]);
         assert_eq!(show_insttype(&s, &types), "{ i32, double, ptr }");
     }
 
@@ -1392,8 +1100,7 @@ mod tests {
     #[test]
     fn test_named_struct_def_defined() {
         let types = mk_types();
-        let inner =
-            types.struct_of(vec![types.i32(), types.double()]);
+        let inner = types.struct_of(vec![types.i32(), types.double()]);
         let def = NamedStructDef::Defined(inner);
         assert_eq!(def.show(&types), "type { i32, double }");
     }
@@ -1444,8 +1151,7 @@ mod tests {
             ConstantRef::new(Constant::Int { bits: 32, value: 1 }),
             ConstantRef::new(Constant::Float(Float::Double(2.0))),
         ];
-        let c =
-            Constant::Struct { name: None, values, is_packed: false };
+        let c = Constant::Struct { name: None, values, is_packed: false };
         assert_eq!(c.show(&types), "{ 1, double 2 }");
     }
 
@@ -1457,8 +1163,7 @@ mod tests {
             ConstantRef::new(Constant::Int { bits: 32, value: 2 }),
             ConstantRef::new(Constant::Int { bits: 32, value: 3 }),
         ];
-        let c =
-            Constant::Array { element_type: types.i32(), elements };
+        let c = Constant::Array { element_type: types.i32(), elements };
         assert_eq!(c.show(&types), "[ 1, 2, 3 ]");
     }
 
@@ -1536,11 +1241,7 @@ mod tests {
         let types = mk_types();
         let a = mk_local(types.i32(), "a");
         let b = mk_local(types.i32(), "b");
-        let instr = Instruction::Add {
-            operand0: a,
-            operand1: b,
-            dest: Name::Name("r".into()),
-        };
+        let instr = Instruction::Add { operand0: a, operand1: b, dest: Name::Name("r".into()) };
         assert_eq!(instr.show(&types), "%r = add i32 %a, %b");
     }
 
@@ -1549,11 +1250,7 @@ mod tests {
         let types = mk_types();
         let a = mk_local(types.i64(), "x");
         let b = mk_local(types.i64(), "y");
-        let instr = Instruction::Sub {
-            operand0: a,
-            operand1: b,
-            dest: Name::Number(1),
-        };
+        let instr = Instruction::Sub { operand0: a, operand1: b, dest: Name::Number(1) };
         assert_eq!(instr.show(&types), "%1 = sub i64 %x, %y");
     }
 
@@ -1562,11 +1259,7 @@ mod tests {
         let types = mk_types();
         let a = mk_local(types.i32(), "a");
         let b = mk_const_int(32, 3);
-        let instr = Instruction::Mul {
-            operand0: a,
-            operand1: b,
-            dest: Name::Number(2),
-        };
+        let instr = Instruction::Mul { operand0: a, operand1: b, dest: Name::Number(2) };
         assert_eq!(instr.show(&types), "%2 = mul i32 %a, 3");
     }
 
@@ -1575,11 +1268,7 @@ mod tests {
         let types = mk_types();
         let a = mk_local(types.i32(), "a");
         let b = mk_local(types.i32(), "b");
-        let instr = Instruction::UDiv {
-            operand0: a,
-            operand1: b,
-            dest: Name::Name("q".into()),
-        };
+        let instr = Instruction::UDiv { operand0: a, operand1: b, dest: Name::Name("q".into()) };
         assert_eq!(instr.show(&types), "%q = udiv i32 %a, %b");
     }
 
@@ -1588,11 +1277,7 @@ mod tests {
         let types = mk_types();
         let a = mk_local(types.i64(), "a");
         let b = mk_local(types.i64(), "b");
-        let instr = Instruction::SDiv {
-            operand0: a,
-            operand1: b,
-            dest: Name::Name("q".into()),
-        };
+        let instr = Instruction::SDiv { operand0: a, operand1: b, dest: Name::Name("q".into()) };
         assert_eq!(instr.show(&types), "%q = sdiv i64 %a, %b");
     }
 
@@ -1601,11 +1286,7 @@ mod tests {
         let types = mk_types();
         let a = mk_local(types.i32(), "a");
         let b = mk_local(types.i32(), "b");
-        let instr = Instruction::URem {
-            operand0: a,
-            operand1: b,
-            dest: Name::Name("r".into()),
-        };
+        let instr = Instruction::URem { operand0: a, operand1: b, dest: Name::Name("r".into()) };
         assert_eq!(instr.show(&types), "%r = urem i32 %a, %b");
     }
 
@@ -1614,11 +1295,7 @@ mod tests {
         let types = mk_types();
         let a = mk_local(types.i32(), "a");
         let b = mk_local(types.i32(), "b");
-        let instr = Instruction::SRem {
-            operand0: a,
-            operand1: b,
-            dest: Name::Name("r".into()),
-        };
+        let instr = Instruction::SRem { operand0: a, operand1: b, dest: Name::Name("r".into()) };
         assert_eq!(instr.show(&types), "%r = srem i32 %a, %b");
     }
 
@@ -1629,11 +1306,7 @@ mod tests {
         let types = mk_types();
         let a = mk_local(types.i8(), "x");
         let b = mk_const_int(8, 0x0F);
-        let instr = Instruction::And {
-            operand0: a,
-            operand1: b,
-            dest: Name::Name("r".into()),
-        };
+        let instr = Instruction::And { operand0: a, operand1: b, dest: Name::Name("r".into()) };
         assert_eq!(instr.show(&types), "%r = and i8 %x, 15");
     }
 
@@ -1642,11 +1315,7 @@ mod tests {
         let types = mk_types();
         let a = mk_local(types.i32(), "a");
         let b = mk_local(types.i32(), "b");
-        let instr = Instruction::Or {
-            operand0: a,
-            operand1: b,
-            dest: Name::Number(3),
-        };
+        let instr = Instruction::Or { operand0: a, operand1: b, dest: Name::Number(3) };
         assert_eq!(instr.show(&types), "%3 = or i32 %a, %b");
     }
 
@@ -1655,11 +1324,7 @@ mod tests {
         let types = mk_types();
         let a = mk_local(types.i64(), "a");
         let b = mk_local(types.i64(), "b");
-        let instr = Instruction::Xor {
-            operand0: a,
-            operand1: b,
-            dest: Name::Name("r".into()),
-        };
+        let instr = Instruction::Xor { operand0: a, operand1: b, dest: Name::Name("r".into()) };
         assert_eq!(instr.show(&types), "%r = xor i64 %a, %b");
     }
 
@@ -1670,11 +1335,7 @@ mod tests {
         let types = mk_types();
         let a = mk_local(types.i32(), "a");
         let b = mk_const_int(32, 2);
-        let instr = Instruction::Shl {
-            operand0: a,
-            operand1: b,
-            dest: Name::Number(4),
-        };
+        let instr = Instruction::Shl { operand0: a, operand1: b, dest: Name::Number(4) };
         assert_eq!(instr.show(&types), "%4 = shl i32 %a, 2");
     }
 
@@ -1683,11 +1344,7 @@ mod tests {
         let types = mk_types();
         let a = mk_local(types.i64(), "a");
         let b = mk_const_int(64, 3);
-        let instr = Instruction::LShr {
-            operand0: a,
-            operand1: b,
-            dest: Name::Name("r".into()),
-        };
+        let instr = Instruction::LShr { operand0: a, operand1: b, dest: Name::Name("r".into()) };
         assert_eq!(instr.show(&types), "%r = lshr i64 %a, 3");
     }
 
@@ -1696,11 +1353,7 @@ mod tests {
         let types = mk_types();
         let a = mk_local(types.i32(), "a");
         let b = mk_const_int(32, 1);
-        let instr = Instruction::AShr {
-            operand0: a,
-            operand1: b,
-            dest: Name::Name("r".into()),
-        };
+        let instr = Instruction::AShr { operand0: a, operand1: b, dest: Name::Name("r".into()) };
         assert_eq!(instr.show(&types), "%r = ashr i32 %a, 1");
     }
 
@@ -1711,11 +1364,7 @@ mod tests {
         let types = mk_types();
         let a = mk_local(types.double(), "a");
         let b = mk_local(types.double(), "b");
-        let instr = Instruction::FAdd {
-            operand0: a,
-            operand1: b,
-            dest: Name::Number(0),
-        };
+        let instr = Instruction::FAdd { operand0: a, operand1: b, dest: Name::Number(0) };
         assert_eq!(instr.show(&types), "%0 = fadd double %a, %b");
     }
 
@@ -1724,11 +1373,7 @@ mod tests {
         let types = mk_types();
         let a = mk_local(types.single(), "x");
         let b = mk_const_float_single(1.0);
-        let instr = Instruction::FSub {
-            operand0: a,
-            operand1: b,
-            dest: Name::Name("r".into()),
-        };
+        let instr = Instruction::FSub { operand0: a, operand1: b, dest: Name::Name("r".into()) };
         assert_eq!(instr.show(&types), "%r = fsub float %x, float 1");
     }
 
@@ -1737,15 +1382,8 @@ mod tests {
         let types = mk_types();
         let a = mk_local(types.double(), "a");
         let b = mk_const_float_double(2.0);
-        let instr = Instruction::FMul {
-            operand0: a,
-            operand1: b,
-            dest: Name::Number(1),
-        };
-        assert_eq!(
-            instr.show(&types),
-            "%1 = fmul double %a, double 2"
-        );
+        let instr = Instruction::FMul { operand0: a, operand1: b, dest: Name::Number(1) };
+        assert_eq!(instr.show(&types), "%1 = fmul double %a, double 2");
     }
 
     #[test]
@@ -1753,11 +1391,7 @@ mod tests {
         let types = mk_types();
         let a = mk_local(types.double(), "a");
         let b = mk_local(types.double(), "b");
-        let instr = Instruction::FDiv {
-            operand0: a,
-            operand1: b,
-            dest: Name::Name("q".into()),
-        };
+        let instr = Instruction::FDiv { operand0: a, operand1: b, dest: Name::Name("q".into()) };
         assert_eq!(instr.show(&types), "%q = fdiv double %a, %b");
     }
 
@@ -1766,25 +1400,15 @@ mod tests {
         let types = mk_types();
         let a = mk_local(types.double(), "a");
         let b = mk_const_float_double(3.0);
-        let instr = Instruction::FRem {
-            operand0: a,
-            operand1: b,
-            dest: Name::Name("r".into()),
-        };
-        assert_eq!(
-            instr.show(&types),
-            "%r = frem double %a, double 3"
-        );
+        let instr = Instruction::FRem { operand0: a, operand1: b, dest: Name::Name("r".into()) };
+        assert_eq!(instr.show(&types), "%r = frem double %a, double 3");
     }
 
     #[test]
     fn test_fneg() {
         let types = mk_types();
         let a = mk_local(types.double(), "a");
-        let instr = Instruction::FNeg {
-            operand: a,
-            dest: Name::Name("r".into()),
-        };
+        let instr = Instruction::FNeg { operand: a, dest: Name::Name("r".into()) };
         assert_eq!(instr.show(&types), "%r = fneg double %a");
     }
 
@@ -1800,26 +1424,16 @@ mod tests {
             dest: Name::Name("p".into()),
             alignment: 4,
         };
-        assert_eq!(
-            instr.show(&types),
-            "%p = alloca i32, i32 1, align 4"
-        );
+        assert_eq!(instr.show(&types), "%p = alloca i32, i32 1, align 4");
     }
 
     #[test]
     fn test_load() {
         let types = mk_types();
         let addr = mk_local(types.pointer(), "p");
-        let instr = Instruction::Load {
-            address: addr,
-            dest: Name::Name("v".into()),
-            loaded_ty: types.i32(),
-            alignment: 4,
-        };
-        assert_eq!(
-            instr.show(&types),
-            "%v = load i32, ptr %p, align 4"
-        );
+        let instr =
+            Instruction::Load { address: addr, dest: Name::Name("v".into()), loaded_ty: types.i32(), alignment: 4 };
+        assert_eq!(instr.show(&types), "%v = load i32, ptr %p, align 4");
     }
 
     #[test]
@@ -1827,15 +1441,8 @@ mod tests {
         let types = mk_types();
         let val = mk_local(types.i32(), "v");
         let addr = mk_local(types.pointer(), "p");
-        let instr = Instruction::Store {
-            value: val,
-            address: addr,
-            alignment: 8,
-        };
-        assert_eq!(
-            instr.show(&types),
-            "store i32 %v, ptr %p, align 8"
-        );
+        let instr = Instruction::Store { value: val, address: addr, alignment: 8 };
+        assert_eq!(instr.show(&types), "store i32 %v, ptr %p, align 8");
     }
 
     #[test]
@@ -1849,10 +1456,7 @@ mod tests {
             dest: Name::Name("r".into()),
             source_element_type: types.i32(),
         };
-        assert_eq!(
-            instr.show(&types),
-            "%r = getelementptr i32, ptr %p, i64 %i"
-        );
+        assert_eq!(instr.show(&types), "%r = getelementptr i32, ptr %p, i64 %i");
     }
 
     #[test]
@@ -1867,10 +1471,7 @@ mod tests {
             dest: Name::Name("r".into()),
             source_element_type: types.i32(),
         };
-        assert_eq!(
-            instr.show(&types),
-            "%r = getelementptr i32, ptr %p, i64 0, i64 %i"
-        );
+        assert_eq!(instr.show(&types), "%r = getelementptr i32, ptr %p, i64 0, i64 %i");
     }
 
     // ========================= Instructions: conversions =========================
@@ -1879,11 +1480,7 @@ mod tests {
     fn test_trunc() {
         let types = mk_types();
         let a = mk_local(types.i32(), "a");
-        let instr = Instruction::Trunc {
-            operand: a,
-            to_type: types.i8(),
-            dest: Name::Name("r".into()),
-        };
+        let instr = Instruction::Trunc { operand: a, to_type: types.i8(), dest: Name::Name("r".into()) };
         assert_eq!(instr.show(&types), "%r = trunc i32 %a to i8");
     }
 
@@ -1891,11 +1488,7 @@ mod tests {
     fn test_zext() {
         let types = mk_types();
         let a = mk_local(types.i8(), "a");
-        let instr = Instruction::ZExt {
-            operand: a,
-            to_type: types.i32(),
-            dest: Name::Name("r".into()),
-        };
+        let instr = Instruction::ZExt { operand: a, to_type: types.i32(), dest: Name::Name("r".into()) };
         assert_eq!(instr.show(&types), "%r = zext i8 %a to i32");
     }
 
@@ -1903,11 +1496,7 @@ mod tests {
     fn test_sext() {
         let types = mk_types();
         let a = mk_local(types.i32(), "a");
-        let instr = Instruction::SExt {
-            operand: a,
-            to_type: types.i64(),
-            dest: Name::Name("r".into()),
-        };
+        let instr = Instruction::SExt { operand: a, to_type: types.i64(), dest: Name::Name("r".into()) };
         assert_eq!(instr.show(&types), "%r = sext i32 %a to i64");
     }
 
@@ -1915,86 +1504,47 @@ mod tests {
     fn test_fptrunc() {
         let types = mk_types();
         let a = mk_local(types.double(), "a");
-        let instr = Instruction::FPTrunc {
-            operand: a,
-            to_type: types.single(),
-            dest: Name::Name("r".into()),
-        };
-        assert_eq!(
-            instr.show(&types),
-            "%r = fptrunc double %a to float"
-        );
+        let instr = Instruction::FPTrunc { operand: a, to_type: types.single(), dest: Name::Name("r".into()) };
+        assert_eq!(instr.show(&types), "%r = fptrunc double %a to float");
     }
 
     #[test]
     fn test_fpext() {
         let types = mk_types();
         let a = mk_local(types.single(), "a");
-        let instr = Instruction::FPExt {
-            operand: a,
-            to_type: types.double(),
-            dest: Name::Name("r".into()),
-        };
-        assert_eq!(
-            instr.show(&types),
-            "%r = fpext float %a to double"
-        );
+        let instr = Instruction::FPExt { operand: a, to_type: types.double(), dest: Name::Name("r".into()) };
+        assert_eq!(instr.show(&types), "%r = fpext float %a to double");
     }
 
     #[test]
     fn test_fptoui() {
         let types = mk_types();
         let a = mk_local(types.double(), "a");
-        let instr = Instruction::FPToUI {
-            operand: a,
-            to_type: types.i32(),
-            dest: Name::Name("r".into()),
-        };
-        assert_eq!(
-            instr.show(&types),
-            "%r = fptoui double %a to i32"
-        );
+        let instr = Instruction::FPToUI { operand: a, to_type: types.i32(), dest: Name::Name("r".into()) };
+        assert_eq!(instr.show(&types), "%r = fptoui double %a to i32");
     }
 
     #[test]
     fn test_fptosi() {
         let types = mk_types();
         let a = mk_local(types.double(), "a");
-        let instr = Instruction::FPToSI {
-            operand: a,
-            to_type: types.i64(),
-            dest: Name::Name("r".into()),
-        };
-        assert_eq!(
-            instr.show(&types),
-            "%r = fptosi double %a to i64"
-        );
+        let instr = Instruction::FPToSI { operand: a, to_type: types.i64(), dest: Name::Name("r".into()) };
+        assert_eq!(instr.show(&types), "%r = fptosi double %a to i64");
     }
 
     #[test]
     fn test_uitofp() {
         let types = mk_types();
         let a = mk_local(types.i32(), "a");
-        let instr = Instruction::UIToFP {
-            operand: a,
-            to_type: types.double(),
-            dest: Name::Name("r".into()),
-        };
-        assert_eq!(
-            instr.show(&types),
-            "%r = uitofp i32 %a to double"
-        );
+        let instr = Instruction::UIToFP { operand: a, to_type: types.double(), dest: Name::Name("r".into()) };
+        assert_eq!(instr.show(&types), "%r = uitofp i32 %a to double");
     }
 
     #[test]
     fn test_sitofp() {
         let types = mk_types();
         let a = mk_local(types.i64(), "a");
-        let instr = Instruction::SIToFP {
-            operand: a,
-            to_type: types.single(),
-            dest: Name::Name("r".into()),
-        };
+        let instr = Instruction::SIToFP { operand: a, to_type: types.single(), dest: Name::Name("r".into()) };
         assert_eq!(instr.show(&types), "%r = sitofp i64 %a to float");
     }
 
@@ -2002,11 +1552,7 @@ mod tests {
     fn test_ptrtoint() {
         let types = mk_types();
         let a = mk_local(types.pointer(), "p");
-        let instr = Instruction::PtrToInt {
-            operand: a,
-            to_type: types.i64(),
-            dest: Name::Name("r".into()),
-        };
+        let instr = Instruction::PtrToInt { operand: a, to_type: types.i64(), dest: Name::Name("r".into()) };
         assert_eq!(instr.show(&types), "%r = ptrtoint ptr %p to i64");
     }
 
@@ -2014,11 +1560,7 @@ mod tests {
     fn test_inttoptr() {
         let types = mk_types();
         let a = mk_local(types.i64(), "a");
-        let instr = Instruction::IntToPtr {
-            operand: a,
-            to_type: types.pointer(),
-            dest: Name::Name("p".into()),
-        };
+        let instr = Instruction::IntToPtr { operand: a, to_type: types.pointer(), dest: Name::Name("p".into()) };
         assert_eq!(instr.show(&types), "%p = inttoptr i64 %a to ptr");
     }
 
@@ -2026,15 +1568,8 @@ mod tests {
     fn test_bitcast() {
         let types = mk_types();
         let a = mk_local(types.single(), "a");
-        let instr = Instruction::BitCast {
-            operand: a,
-            to_type: types.i32(),
-            dest: Name::Name("r".into()),
-        };
-        assert_eq!(
-            instr.show(&types),
-            "%r = bitcast float %a to i32"
-        );
+        let instr = Instruction::BitCast { operand: a, to_type: types.i32(), dest: Name::Name("r".into()) };
+        assert_eq!(instr.show(&types), "%r = bitcast float %a to i32");
     }
 
     // ========================= Instructions: comparisons =========================
@@ -2044,12 +1579,8 @@ mod tests {
         let types = mk_types();
         let a = mk_local(types.i32(), "a");
         let b = mk_local(types.i32(), "b");
-        let instr = Instruction::ICmp {
-            predicate: IntPredicate::SLT,
-            operand0: a,
-            operand1: b,
-            dest: Name::Name("r".into()),
-        };
+        let instr =
+            Instruction::ICmp { predicate: IntPredicate::SLT, operand0: a, operand1: b, dest: Name::Name("r".into()) };
         assert_eq!(instr.show(&types), "%r = icmp slt i32 %a, %b");
     }
 
@@ -2058,12 +1589,7 @@ mod tests {
         let types = mk_types();
         let a = mk_local(types.i64(), "a");
         let b = mk_const_int(64, 0);
-        let instr = Instruction::ICmp {
-            predicate: IntPredicate::EQ,
-            operand0: a,
-            operand1: b,
-            dest: Name::Number(5),
-        };
+        let instr = Instruction::ICmp { predicate: IntPredicate::EQ, operand0: a, operand1: b, dest: Name::Number(5) };
         assert_eq!(instr.show(&types), "%5 = icmp eq i64 %a, 0");
     }
 
@@ -2072,12 +1598,8 @@ mod tests {
         let types = mk_types();
         let a = mk_local(types.double(), "a");
         let b = mk_local(types.double(), "b");
-        let instr = Instruction::FCmp {
-            predicate: FPPredicate::OLT,
-            operand0: a,
-            operand1: b,
-            dest: Name::Name("r".into()),
-        };
+        let instr =
+            Instruction::FCmp { predicate: FPPredicate::OLT, operand0: a, operand1: b, dest: Name::Name("r".into()) };
         assert_eq!(instr.show(&types), "%r = fcmp olt double %a, %b");
     }
 
@@ -2087,15 +1609,11 @@ mod tests {
     fn test_call_void() {
         let types = mk_types();
         let fn_ty = types.func_type(types.void(), vec![types.i32()]);
-        let fn_name = Operand::LocalOperand {
-            name: Name::Name("puts".into()),
-            ty: fn_ty,
-        };
+        let fn_name = Operand::LocalOperand { name: Name::Name("puts".into()), ty: fn_ty };
         let arg = mk_local(types.i32(), "arg");
         let instr = Instruction::Call {
             function: fn_name,
-            function_ty: types
-                .func_type(types.void(), vec![types.i32()]),
+            function_ty: types.func_type(types.void(), vec![types.i32()]),
             arguments: vec![arg],
             dest: None,
             is_tail_call: false,
@@ -2108,19 +1626,13 @@ mod tests {
         let types = mk_types();
         let fn_name = Operand::LocalOperand {
             name: Name::Name("add".into()),
-            ty: types.func_type(
-                types.i32(),
-                vec![types.i32(), types.i32()],
-            ),
+            ty: types.func_type(types.i32(), vec![types.i32(), types.i32()]),
         };
         let a = mk_local(types.i32(), "a");
         let b = mk_local(types.i32(), "b");
         let instr = Instruction::Call {
             function: fn_name,
-            function_ty: types.func_type(
-                types.i32(),
-                vec![types.i32(), types.i32()],
-            ),
+            function_ty: types.func_type(types.i32(), vec![types.i32(), types.i32()]),
             arguments: vec![a, b],
             dest: Some(Name::Name("r".into())),
             is_tail_call: false,
@@ -2131,10 +1643,8 @@ mod tests {
     #[test]
     fn test_tail_call() {
         let types = mk_types();
-        let fn_name = Operand::LocalOperand {
-            name: Name::Name("foo".into()),
-            ty: types.func_type(types.void(), vec![]),
-        };
+        let fn_name =
+            Operand::LocalOperand { name: Name::Name("foo".into()), ty: types.func_type(types.void(), vec![]) };
         let instr = Instruction::Call {
             function: fn_name,
             function_ty: types.func_type(types.void(), vec![]),
@@ -2150,18 +1660,10 @@ mod tests {
     #[test]
     fn test_extract_value() {
         let types = mk_types();
-        let s_type =
-            types.struct_of(vec![types.i32(), types.double()]);
+        let s_type = types.struct_of(vec![types.i32(), types.double()]);
         let agg = mk_local(s_type, "s");
-        let instr = Instruction::ExtractValue {
-            aggregate: agg,
-            indices: vec![0],
-            dest: Name::Name("r".into()),
-        };
-        assert_eq!(
-            instr.show(&types),
-            "%r = extractvalue { i32, double } %s, 0"
-        );
+        let instr = Instruction::ExtractValue { aggregate: agg, indices: vec![0], dest: Name::Name("r".into()) };
+        assert_eq!(instr.show(&types), "%r = extractvalue { i32, double } %s, 0");
     }
 
     #[test]
@@ -2170,34 +1672,19 @@ mod tests {
         let inner = types.array_of(types.i32(), 4);
         let outer = types.struct_of(vec![types.double(), inner]);
         let agg = mk_local(outer, "s");
-        let instr = Instruction::ExtractValue {
-            aggregate: agg,
-            indices: vec![1, 2],
-            dest: Name::Name("r".into()),
-        };
-        assert_eq!(
-            instr.show(&types),
-            "%r = extractvalue { double, [4 x i32] } %s, 1, 2"
-        );
+        let instr = Instruction::ExtractValue { aggregate: agg, indices: vec![1, 2], dest: Name::Name("r".into()) };
+        assert_eq!(instr.show(&types), "%r = extractvalue { double, [4 x i32] } %s, 1, 2");
     }
 
     #[test]
     fn test_insert_value() {
         let types = mk_types();
-        let s_type =
-            types.struct_of(vec![types.i32(), types.double()]);
+        let s_type = types.struct_of(vec![types.i32(), types.double()]);
         let agg = mk_local(s_type.clone(), "s");
         let elem = mk_local(types.i32(), "e");
-        let instr = Instruction::InsertValue {
-            aggregate: agg,
-            element: elem,
-            indices: vec![0],
-            dest: Name::Name("r".into()),
-        };
-        assert_eq!(
-            instr.show(&types),
-            "%r = insertvalue { i32, double } %s, %e, 0"
-        );
+        let instr =
+            Instruction::InsertValue { aggregate: agg, element: elem, indices: vec![0], dest: Name::Name("r".into()) };
+        assert_eq!(instr.show(&types), "%r = insertvalue { i32, double } %s, %e, 0");
     }
 
     #[test]
@@ -2212,10 +1699,7 @@ mod tests {
             indices: vec![0, 1],
             dest: Name::Name("r".into()),
         };
-        assert_eq!(
-            instr.show(&types),
-            "%r = insertvalue [3 x i32] %a, %e, 0, 1"
-        );
+        assert_eq!(instr.show(&types), "%r = insertvalue [3 x i32] %a, %e, 0, 1");
     }
 
     // ========================= Terminators =========================
@@ -2259,10 +1743,7 @@ mod tests {
             true_dest: Name::Name("then".into()),
             false_dest: Name::Name("else".into()),
         };
-        assert_eq!(
-            term.show(&types),
-            "br i1 %c, label %then, label %else"
-        );
+        assert_eq!(term.show(&types), "br i1 %c, label %then, label %else");
     }
 
     #[test]
@@ -2271,15 +1752,9 @@ mod tests {
         let op = mk_local(types.pointer(), "addr");
         let term = Terminator::IndirectBr {
             operand: op,
-            possible_dests: vec![
-                Name::Name("d1".into()),
-                Name::Name("d2".into()),
-            ],
+            possible_dests: vec![Name::Name("d1".into()), Name::Name("d2".into())],
         };
-        assert_eq!(
-            term.show(&types),
-            "indirectbr %addr, [ label %d1, label %d2 ]"
-        );
+        assert_eq!(term.show(&types), "indirectbr %addr, [ label %d1, label %d2 ]");
     }
 
     #[test]
@@ -2294,20 +1769,14 @@ mod tests {
     #[test]
     fn test_parameter() {
         let types = mk_types();
-        let param = Parameter {
-            name: Name::Name("a".into()),
-            ty: types.i32(),
-        };
+        let param = Parameter { name: Name::Name("a".into()), ty: types.i32() };
         assert_eq!(param.show(&types), "i32 %a");
     }
 
     #[test]
     fn test_parameter_ptr() {
         let types = mk_types();
-        let param = Parameter {
-            name: Name::Name("p".into()),
-            ty: types.pointer(),
-        };
+        let param = Parameter { name: Name::Name("p".into()), ty: types.pointer() };
         assert_eq!(param.show(&types), "ptr %p");
     }
 
@@ -2318,10 +1787,7 @@ mod tests {
         let types = mk_types();
         let decl = FunctionDeclaration {
             name: "puts".into(),
-            parameters: vec![Parameter {
-                name: Name::Name("s".into()),
-                ty: types.pointer(),
-            }],
+            parameters: vec![Parameter { name: Name::Name("s".into()), ty: types.pointer() }],
             return_type: types.void(),
             alignment: 0,
         };
@@ -2334,22 +1800,13 @@ mod tests {
         let decl = FunctionDeclaration {
             name: "add".into(),
             parameters: vec![
-                Parameter {
-                    name: Name::Name("a".into()),
-                    ty: types.i32(),
-                },
-                Parameter {
-                    name: Name::Name("b".into()),
-                    ty: types.i32(),
-                },
+                Parameter { name: Name::Name("a".into()), ty: types.i32() },
+                Parameter { name: Name::Name("b".into()), ty: types.i32() },
             ],
             return_type: types.i32(),
             alignment: 0,
         };
-        assert_eq!(
-            decl.show(&types),
-            "declare  @add(i32 %a, i32 %b)\n"
-        );
+        assert_eq!(decl.show(&types), "declare  @add(i32 %a, i32 %b)\n");
     }
 
     // ========================= Function =========================
@@ -2364,15 +1821,10 @@ mod tests {
             basic_blocks: vec![BasicBlock {
                 name: Name::Name("entry".into()),
                 instrs: vec![],
-                term: Terminator::Ret {
-                    return_operand: Some(mk_const_int(32, 0)),
-                },
+                term: Terminator::Ret { return_operand: Some(mk_const_int(32, 0)) },
             }],
         };
-        assert_eq!(
-            func.show(&types),
-            "define i32 @main() {\nentry:\n  ret i32 0\n}"
-        );
+        assert_eq!(func.show(&types), "define i32 @main() {\nentry:\n  ret i32 0\n}");
     }
 
     #[test]
@@ -2383,28 +1835,15 @@ mod tests {
         let func = Function {
             name: "add".into(),
             parameters: vec![
-                Parameter {
-                    name: Name::Name("a".into()),
-                    ty: types.i32(),
-                },
-                Parameter {
-                    name: Name::Name("b".into()),
-                    ty: types.i32(),
-                },
+                Parameter { name: Name::Name("a".into()), ty: types.i32() },
+                Parameter { name: Name::Name("b".into()), ty: types.i32() },
             ],
             return_type: types.i32(),
             basic_blocks: vec![BasicBlock {
                 name: Name::Name("entry".into()),
-                instrs: vec![Instruction::Add {
-                    operand0: a_operand,
-                    operand1: b_operand,
-                    dest: Name::Number(0),
-                }],
+                instrs: vec![Instruction::Add { operand0: a_operand, operand1: b_operand, dest: Name::Number(0) }],
                 term: Terminator::Ret {
-                    return_operand: Some(Operand::LocalOperand {
-                        name: Name::Number(0),
-                        ty: types.i32(),
-                    }),
+                    return_operand: Some(Operand::LocalOperand { name: Name::Number(0), ty: types.i32() }),
                 },
             }],
         };
@@ -2426,10 +1865,7 @@ mod tests {
         let cond = mk_local(types.bool(), "c");
         let func = Function {
             name: "choose".into(),
-            parameters: vec![Parameter {
-                name: Name::Name("c".into()),
-                ty: types.bool(),
-            }],
+            parameters: vec![Parameter { name: Name::Name("c".into()), ty: types.bool() }],
             return_type: types.i32(),
             basic_blocks: vec![
                 BasicBlock {
@@ -2444,24 +1880,18 @@ mod tests {
                 BasicBlock {
                     name: Name::Name("then".into()),
                     instrs: vec![],
-                    term: Terminator::Ret {
-                        return_operand: Some(mk_const_int(32, 1)),
-                    },
+                    term: Terminator::Ret { return_operand: Some(mk_const_int(32, 1)) },
                 },
                 BasicBlock {
                     name: Name::Name("else".into()),
                     instrs: vec![],
-                    term: Terminator::Ret {
-                        return_operand: Some(mk_const_int(32, 2)),
-                    },
+                    term: Terminator::Ret { return_operand: Some(mk_const_int(32, 2)) },
                 },
             ],
         };
         let output = func.show(&types);
         assert!(output.starts_with("define i32 @choose(i1 %c) {\n"));
-        assert!(output.contains(
-            "entry:\n  br i1 %c, label %then, label %else\n"
-        ));
+        assert!(output.contains("entry:\n  br i1 %c, label %then, label %else\n"));
         assert!(output.contains("then:\n  ret i32 1\n"));
         assert!(output.contains("else:\n  ret i32 2\n"));
         assert!(output.ends_with("}"));
@@ -2477,10 +1907,7 @@ mod tests {
             is_constant: true,
             ty: types.i32(),
             addr_space: 0,
-            initializer: Some(ConstantRef::new(Constant::Int {
-                bits: 32,
-                value: 42,
-            })),
+            initializer: Some(ConstantRef::new(Constant::Int { bits: 32, value: 42 })),
         };
         assert_eq!(gv.show(&types), "@%x = constant i32 42");
     }
@@ -2508,10 +1935,7 @@ mod tests {
             addr_space: 1,
             initializer: None,
         };
-        assert_eq!(
-            gv.show(&types),
-            "@%buf = addrspace(1) global [256 x i8]"
-        );
+        assert_eq!(gv.show(&types), "@%buf = addrspace(1) global [256 x i8]");
     }
 
     // ========================= Module =========================
@@ -2527,19 +1951,13 @@ mod tests {
             global_vars: vec![],
             types: types.clone(),
         };
-        assert_eq!(
-            module.show(&types),
-            "source_filename = \"test.ll\"\n"
-        );
+        assert_eq!(module.show(&types), "source_filename = \"test.ll\"\n");
     }
 
     #[test]
     fn test_module_with_global_and_function() {
         let mut types = Types::new();
-        types.add_named_struct_def(
-            "Foo".into(),
-            NamedStructDef::Opaque,
-        );
+        types.add_named_struct_def("Foo".into(), NamedStructDef::Opaque);
 
         let module = Module {
             name: "test".into(),
@@ -2547,43 +1965,25 @@ mod tests {
             functions: vec![Function {
                 name: "add".into(),
                 parameters: vec![
-                    Parameter {
-                        name: Name::Name("a".into()),
-                        ty: types.i32(),
-                    },
-                    Parameter {
-                        name: Name::Name("b".into()),
-                        ty: types.i32(),
-                    },
+                    Parameter { name: Name::Name("a".into()), ty: types.i32() },
+                    Parameter { name: Name::Name("b".into()), ty: types.i32() },
                 ],
                 return_type: types.i32(),
                 basic_blocks: vec![BasicBlock {
                     name: Name::Name("entry".into()),
                     instrs: vec![Instruction::Add {
-                        operand0: Operand::LocalOperand {
-                            name: Name::Name("a".into()),
-                            ty: types.i32(),
-                        },
-                        operand1: Operand::LocalOperand {
-                            name: Name::Name("b".into()),
-                            ty: types.i32(),
-                        },
+                        operand0: Operand::LocalOperand { name: Name::Name("a".into()), ty: types.i32() },
+                        operand1: Operand::LocalOperand { name: Name::Name("b".into()), ty: types.i32() },
                         dest: Name::Number(0),
                     }],
                     term: Terminator::Ret {
-                        return_operand: Some(Operand::LocalOperand {
-                            name: Name::Number(0),
-                            ty: types.i32(),
-                        }),
+                        return_operand: Some(Operand::LocalOperand { name: Name::Number(0), ty: types.i32() }),
                     },
                 }],
             }],
             func_declarations: vec![FunctionDeclaration {
                 name: "puts".into(),
-                parameters: vec![Parameter {
-                    name: Name::Name("s".into()),
-                    ty: types.pointer(),
-                }],
+                parameters: vec![Parameter { name: Name::Name("s".into()), ty: types.pointer() }],
                 return_type: types.void(),
                 alignment: 0,
             }],
@@ -2592,17 +1992,12 @@ mod tests {
                 is_constant: false,
                 ty: types.i32(),
                 addr_space: 0,
-                initializer: Some(ConstantRef::new(Constant::Int {
-                    bits: 32,
-                    value: 0,
-                })),
+                initializer: Some(ConstantRef::new(Constant::Int { bits: 32, value: 0 })),
             }],
             types: types.clone(),
         };
         let output = module.show(&types);
-        assert!(
-            output.starts_with("source_filename = \"test.ll\"\n")
-        );
+        assert!(output.starts_with("source_filename = \"test.ll\"\n"));
         assert!(output.contains("%Foo = type opaque"));
         assert!(output.contains("@%count = global i32 0"));
         assert!(output.contains("declare  @puts("));

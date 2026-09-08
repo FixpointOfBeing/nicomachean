@@ -1,24 +1,22 @@
-use crate::riscv_var::basicblock::RvVarBasicBlock;
+use crate::riscv::RvBasicBlock;
 use std::fmt;
 
-// todo: Function { name, params, blocks, entry }，Program = Vec<Function>。
-
-pub struct RvVarProgram {
-    pub blocks: Vec<RvVarBasicBlock>,
+pub struct RvProgram {
+    pub blocks: Vec<RvBasicBlock>,
 }
 
-impl RvVarProgram {
+impl RvProgram {
     pub fn new() -> Self {
         let blocks = vec![];
-        RvVarProgram { blocks }
+        RvProgram { blocks }
     }
 
-    pub fn append_basic_block(&mut self, block: RvVarBasicBlock) {
+    pub fn append_basic_block(&mut self, block: RvBasicBlock) {
         self.blocks.push(block);
     }
 }
 
-impl fmt::Display for RvVarProgram {
+impl fmt::Display for RvProgram {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for (i, block) in self.blocks.iter().enumerate() {
             if i > 0 {
@@ -29,3 +27,4 @@ impl fmt::Display for RvVarProgram {
         Ok(())
     }
 }
+

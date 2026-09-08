@@ -8,19 +8,11 @@ pub enum Value {
     Int(i64),
     Float(f64),
     Closure(Env, Vec<Ident>, Expr),
-    RecClosure {
-        env: Env,
-        fname: Ident,
-        params: Vec<Ident>,
-        body: Expr,
-    },
+    RecClosure { env: Env, fname: Ident, params: Vec<Ident>, body: Expr },
 }
 
 impl std::fmt::Display for Value {
-    fn fmt(
-        &self,
-        f: &mut std::fmt::Formatter<'_>,
-    ) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Value::Unit => write!(f, "()"),
             Value::Bool(b) => write!(f, "{}", b),

@@ -1,9 +1,7 @@
 use std::collections::HashSet;
 
-use crate::riscv_var::{
-    basicblock::RvVarBasicBlock, instruction::RvVarInstr,
-    label::Label, location::RvVarLocation,
-};
+use crate::riscv::Label;
+use crate::riscv_var::{RvVarBasicBlock, RvVarInstr, RvVarLocation};
 
 pub struct RvVarInstrLiveness {
     pub instr: RvVarInstr,
@@ -16,41 +14,26 @@ pub struct RvVarBasicBlockLiveness {
     pub live_out: HashSet<RvVarLocation>,
 }
 
-fn read_instr(
-    instr: &RvVarInstr,
-    live_before: &mut HashSet<RvVarLocation>,
-) {
+fn read_instr(instr: &RvVarInstr, live_before: &mut HashSet<RvVarLocation>) {
     live_before.extend(instr.source_locations());
 }
 
-fn write_instr(
-    instr: &RvVarInstr,
-    live_before: &mut HashSet<RvVarLocation>,
-) {
+fn write_instr(instr: &RvVarInstr, live_before: &mut HashSet<RvVarLocation>) {
     if let Some(dest) = instr.dest_location() {
         live_before.remove(&dest);
     }
 }
 
-fn liveness_analysis(
-    basic_block: &RvVarBasicBlock,
-) -> RvVarBasicBlockLiveness {
+pub fn liveness_analysis(basic_block: &RvVarBasicBlock) -> RvVarBasicBlockLiveness {
     let mut live = HashSet::new();
     let mut instrs = Vec::new();
     for instr in basic_block.instrs.iter().rev() {
         write_instr(instr, &mut live);
         read_instr(instr, &mut live);
-        instrs.push(RvVarInstrLiveness {
-            instr: instr.clone(),
-            live: live.clone(),
-        });
+        instrs.push(RvVarInstrLiveness { instr: instr.clone(), live: live.clone() });
     }
     instrs.reverse();
-    RvVarBasicBlockLiveness {
-        name: basic_block.name.clone(),
-        instrs: instrs,
-        live_out: live,
-    }
+    RvVarBasicBlockLiveness { name: basic_block.name.clone(), instrs: instrs, live_out: live }
 }
 
 #[cfg(test)]
@@ -101,18 +84,11 @@ mod tests {
 
     #[test]
     fn overwritten_definition_is_dead() {
-        let bb = mk_bb(vec![
-            add("a", "b", "c"),
-            add("a", "d", "e"),
-            add("f", "a", "g"),
-        ]);
+        let bb = mk_bb(vec![add("a", "b", "c"), add("a", "d", "e"), add("f", "a", "g")]);
         let result = analyze(&bb);
         assert_eq!(result.instrs[2].live, locs(&["a", "g"]));
         assert_eq!(result.instrs[1].live, locs(&["d", "e", "g"]));
-        assert_eq!(
-            result.instrs[0].live,
-            locs(&["b", "c", "d", "e", "g"])
-        );
+        assert_eq!(result.instrs[0].live, locs(&["b", "c", "d", "e", "g"]));
         assert_eq!(result.live_out, locs(&["b", "c", "d", "e", "g"]));
     }
 
@@ -126,11 +102,7 @@ mod tests {
 
     #[test]
     fn load_kills_dest_and_reads_address() {
-        let bb = mk_bb(vec![RvVarInstr::Lw {
-            rd: loc("a"),
-            rs1: loc("p"),
-            imm: Imm12::from_i16(0),
-        }]);
+        let bb = mk_bb(vec![RvVarInstr::Lw { rd: loc("a"), rs1: loc("p"), imm: Imm12::from_i16(0) }]);
         let result = analyze(&bb);
         assert_eq!(result.instrs[0].live, locs(&["p"]));
         assert_eq!(result.live_out, locs(&["p"]));
@@ -138,11 +110,7 @@ mod tests {
 
     #[test]
     fn store_reads_address_and_value() {
-        let bb = mk_bb(vec![RvVarInstr::Sd {
-            rs2: loc("v"),
-            rs1: loc("p"),
-            imm: Imm12::from_i16(0),
-        }]);
+        let bb = mk_bb(vec![RvVarInstr::Sd { rs2: loc("v"), rs1: loc("p"), imm: Imm12::from_i16(0) }]);
         let result = analyze(&bb);
         assert_eq!(result.instrs[0].live, locs(&["p", "v"]));
         assert_eq!(result.live_out, locs(&["p", "v"]));
@@ -150,11 +118,7 @@ mod tests {
 
     #[test]
     fn float_store_reads_address_and_value() {
-        let bb = mk_bb(vec![RvVarInstr::Fsd {
-            rs2: loc("v"),
-            rs1: loc("p"),
-            imm: Imm12::from_i16(0),
-        }]);
+        let bb = mk_bb(vec![RvVarInstr::Fsd { rs2: loc("v"), rs1: loc("p"), imm: Imm12::from_i16(0) }]);
         let result = analyze(&bb);
         assert_eq!(result.instrs[0].live, locs(&["p", "v"]));
         assert_eq!(result.live_out, locs(&["p", "v"]));
@@ -162,11 +126,7 @@ mod tests {
 
     #[test]
     fn branch_reads_sources_and_kills_nothing() {
-        let bb = mk_bb(vec![RvVarInstr::Beq {
-            rs1: loc("x"),
-            rs2: loc("y"),
-            label: Label::new("next".into()),
-        }]);
+        let bb = mk_bb(vec![RvVarInstr::Beq { rs1: loc("x"), rs2: loc("y"), label: Label::new("next".into()) }]);
         let result = analyze(&bb);
         assert_eq!(result.instrs[0].live, locs(&["x", "y"]));
         assert_eq!(result.live_out, locs(&["x", "y"]));
@@ -185,12 +145,7 @@ mod tests {
 
     #[test]
     fn fadd_reads_rs1_rs2() {
-        let bb = mk_bb(vec![RvVarInstr::FaddS {
-            rd: loc("d"),
-            rs1: loc("x"),
-            rs2: loc("y"),
-            rm: Rm::Rne,
-        }]);
+        let bb = mk_bb(vec![RvVarInstr::FaddS { rd: loc("d"), rs1: loc("x"), rs2: loc("y"), rm: Rm::Rne }]);
         let result = analyze(&bb);
         assert_eq!(result.instrs[0].live, locs(&["x", "y"]));
         assert_eq!(result.live_out, locs(&["x", "y"]));

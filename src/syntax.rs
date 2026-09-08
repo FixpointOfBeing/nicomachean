@@ -57,10 +57,7 @@ pub enum UnaryOp {
 
 // ----------------------------------------------------------------------------------------------------
 impl std::fmt::Display for Type {
-    fn fmt(
-        &self,
-        f: &mut std::fmt::Formatter<'_>,
-    ) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Type::Unit => {
                 write!(f, "Unit")
@@ -89,10 +86,7 @@ impl std::fmt::Display for Type {
 }
 
 impl std::fmt::Display for BinOp {
-    fn fmt(
-        &self,
-        f: &mut std::fmt::Formatter<'_>,
-    ) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let op_str = match self {
             BinOp::Add => "+",
             BinOp::Sub => "-",
@@ -112,10 +106,7 @@ impl std::fmt::Display for BinOp {
 }
 
 impl std::fmt::Display for UnaryOp {
-    fn fmt(
-        &self,
-        f: &mut std::fmt::Formatter<'_>,
-    ) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let op_str = match self {
             UnaryOp::Neg => "-",
             UnaryOp::Not => "!",
@@ -125,10 +116,7 @@ impl std::fmt::Display for UnaryOp {
 }
 
 impl std::fmt::Display for Expr {
-    fn fmt(
-        &self,
-        f: &mut std::fmt::Formatter<'_>,
-    ) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Expr::Unit => {
                 write!(f, "()")
@@ -155,19 +143,11 @@ impl std::fmt::Display for Expr {
                 write!(f, "({} : {})", expr, ty)
             },
             Expr::If(cond, then_branch, else_branch) => {
-                write!(
-                    f,
-                    "if {} then {} else {}",
-                    cond, then_branch, else_branch
-                )
+                write!(f, "if {} then {} else {}", cond, then_branch, else_branch)
             },
             Expr::Let(name, ann, val, body) => {
                 if let Some(ty) = ann {
-                    write!(
-                        f,
-                        "let {}: {} = {} in {}",
-                        name, ty, val, body
-                    )
+                    write!(f, "let {}: {} = {} in {}", name, ty, val, body)
                 } else {
                     write!(f, "let {} = {} in {}", name, val, body)
                 }
@@ -175,16 +155,10 @@ impl std::fmt::Display for Expr {
             Expr::LetRec(fname, fparams, fret_ty, fbody, body) => {
                 let params_str = fparams
                     .iter()
-                    .map(|(param_name, param_ty)| {
-                        format!("({}: {})", param_name, param_ty)
-                    })
+                    .map(|(param_name, param_ty)| format!("({}: {})", param_name, param_ty))
                     .collect::<Vec<_>>()
                     .join(" ");
-                write!(
-                    f,
-                    "let rec {} {} : {} = {} in {}",
-                    fname, params_str, fret_ty, fbody, body
-                )
+                write!(f, "let rec {} {} : {} = {} in {}", fname, params_str, fret_ty, fbody, body)
             },
             Expr::App(func, args) => {
                 let args_str = args
@@ -197,17 +171,11 @@ impl std::fmt::Display for Expr {
             Expr::Lambda(params, ty, body) => {
                 let params_str = params
                     .iter()
-                    .map(|(param_name, param_ty)| {
-                        format!("({}: {})", param_name, param_ty)
-                    })
+                    .map(|(param_name, param_ty)| format!("({}: {})", param_name, param_ty))
                     .collect::<Vec<_>>()
                     .join(" ");
                 if let Some(ret_ty) = ty {
-                    write!(
-                        f,
-                        "fun {} : {} => {}",
-                        params_str, ret_ty, body
-                    )
+                    write!(f, "fun {} : {} => {}", params_str, ret_ty, body)
                 } else {
                     write!(f, "fun {} => {}", params_str, body)
                 }
@@ -234,22 +202,14 @@ mod tests {
 
     #[test]
     fn test_parse_binop1() {
-        let expr =
-            parser::ExprParser::new().parse("1 + 2 * 4").unwrap();
+        let expr = parser::ExprParser::new().parse("1 + 2 * 4").unwrap();
         match *expr {
-            Expr::BinOp(BinOp::Add, left, right) => {
-                match (*left, *right) {
-                    (
-                        Expr::Int(1),
-                        Expr::BinOp(BinOp::Mul, left, right),
-                    ) => {
-                        assert_eq!(*left, Expr::Int(2));
-                        assert_eq!(*right, Expr::Int(4));
-                    },
-                    _ => panic!(
-                        "Unexpected structure in right operand"
-                    ),
-                }
+            Expr::BinOp(BinOp::Add, left, right) => match (*left, *right) {
+                (Expr::Int(1), Expr::BinOp(BinOp::Mul, left, right)) => {
+                    assert_eq!(*left, Expr::Int(2));
+                    assert_eq!(*right, Expr::Int(4));
+                },
+                _ => panic!("Unexpected structure in right operand"),
             },
             _ => panic!("Expected Expr::BinOp"),
         }
@@ -257,22 +217,16 @@ mod tests {
 
     #[test]
     fn test_parse_binop2() {
-        let expr =
-            parser::ExprParser::new().parse("(3 - 5) / 2").unwrap();
+        let expr = parser::ExprParser::new().parse("(3 - 5) / 2").unwrap();
         match *expr {
-            Expr::BinOp(BinOp::Div, left, right) => {
-                match (*left, *right) {
-                    (
-                        Expr::BinOp(BinOp::Sub, left_sub, right_sub),
-                        Expr::Int(2),
-                    ) => {
-                        assert_eq!(*left_sub, Expr::Int(3));
-                        assert_eq!(*right_sub, Expr::Int(5));
-                    },
-                    _ => {
-                        panic!("Unexpected structure in left operand")
-                    },
-                }
+            Expr::BinOp(BinOp::Div, left, right) => match (*left, *right) {
+                (Expr::BinOp(BinOp::Sub, left_sub, right_sub), Expr::Int(2)) => {
+                    assert_eq!(*left_sub, Expr::Int(3));
+                    assert_eq!(*right_sub, Expr::Int(5));
+                },
+                _ => {
+                    panic!("Unexpected structure in left operand")
+                },
             },
             _ => panic!("Expected Expr::BinOp"),
         }
@@ -280,9 +234,7 @@ mod tests {
 
     #[test]
     fn test_parse_if() {
-        let expr = parser::ExprParser::new()
-            .parse("if true then 1 else 0")
-            .unwrap();
+        let expr = parser::ExprParser::new().parse("if true then 1 else 0").unwrap();
         match *expr {
             Expr::If(cond, then_branch, else_branch) => {
                 assert_eq!(*cond, Expr::Bool(true));
@@ -307,10 +259,7 @@ mod tests {
                 match *body {
                     Expr::BinOp(BinOp::Add, left, right) => {
                         assert_eq!(*left, Expr::Var("x".to_string()));
-                        assert_eq!(
-                            *right,
-                            Expr::Var("y".to_string())
-                        );
+                        assert_eq!(*right, Expr::Var("y".to_string()));
                     },
                     _ => panic!("Expected body to be a BinOp"),
                 }
@@ -349,10 +298,7 @@ mod tests {
     #[test]
     fn test_parse_negative_int() {
         let expr = parser::ExprParser::new().parse("-42").unwrap();
-        assert_eq!(
-            *expr,
-            Expr::UnaryOp(UnaryOp::Neg, Box::new(Expr::Int(42)))
-        );
+        assert_eq!(*expr, Expr::UnaryOp(UnaryOp::Neg, Box::new(Expr::Int(42))));
     }
 
     #[test]
@@ -376,61 +322,31 @@ mod tests {
     #[test]
     fn test_parse_unary_not() {
         let expr = parser::ExprParser::new().parse("!true").unwrap();
-        assert_eq!(
-            *expr,
-            Expr::UnaryOp(UnaryOp::Not, Box::new(Expr::Bool(true)))
-        );
+        assert_eq!(*expr, Expr::UnaryOp(UnaryOp::Not, Box::new(Expr::Bool(true))));
     }
 
     #[test]
     fn test_parse_unary_neg() {
         let expr = parser::ExprParser::new().parse("-x").unwrap();
-        assert_eq!(
-            *expr,
-            Expr::UnaryOp(
-                UnaryOp::Neg,
-                Box::new(Expr::Var("x".to_string()))
-            )
-        );
+        assert_eq!(*expr, Expr::UnaryOp(UnaryOp::Neg, Box::new(Expr::Var("x".to_string()))));
     }
 
     #[test]
     fn test_parse_binop_sub() {
         let expr = parser::ExprParser::new().parse("10 - 3").unwrap();
-        assert_eq!(
-            *expr,
-            Expr::BinOp(
-                BinOp::Sub,
-                Box::new(Expr::Int(10)),
-                Box::new(Expr::Int(3))
-            )
-        );
+        assert_eq!(*expr, Expr::BinOp(BinOp::Sub, Box::new(Expr::Int(10)), Box::new(Expr::Int(3))));
     }
 
     #[test]
     fn test_parse_binop_mul() {
         let expr = parser::ExprParser::new().parse("6 * 7").unwrap();
-        assert_eq!(
-            *expr,
-            Expr::BinOp(
-                BinOp::Mul,
-                Box::new(Expr::Int(6)),
-                Box::new(Expr::Int(7))
-            )
-        );
+        assert_eq!(*expr, Expr::BinOp(BinOp::Mul, Box::new(Expr::Int(6)), Box::new(Expr::Int(7))));
     }
 
     #[test]
     fn test_parse_binop_div() {
         let expr = parser::ExprParser::new().parse("8 / 2").unwrap();
-        assert_eq!(
-            *expr,
-            Expr::BinOp(
-                BinOp::Div,
-                Box::new(Expr::Int(8)),
-                Box::new(Expr::Int(2))
-            )
-        );
+        assert_eq!(*expr, Expr::BinOp(BinOp::Div, Box::new(Expr::Int(8)), Box::new(Expr::Int(2))));
     }
 
     #[test]
@@ -438,11 +354,7 @@ mod tests {
         let expr = parser::ExprParser::new().parse("x == y").unwrap();
         assert_eq!(
             *expr,
-            Expr::BinOp(
-                BinOp::Eq,
-                Box::new(Expr::Var("x".to_string())),
-                Box::new(Expr::Var("y".to_string()))
-            )
+            Expr::BinOp(BinOp::Eq, Box::new(Expr::Var("x".to_string())), Box::new(Expr::Var("y".to_string())))
         );
     }
 
@@ -451,109 +363,53 @@ mod tests {
         let expr = parser::ExprParser::new().parse("x != y").unwrap();
         assert_eq!(
             *expr,
-            Expr::BinOp(
-                BinOp::Neq,
-                Box::new(Expr::Var("x".to_string())),
-                Box::new(Expr::Var("y".to_string()))
-            )
+            Expr::BinOp(BinOp::Neq, Box::new(Expr::Var("x".to_string())), Box::new(Expr::Var("y".to_string())))
         );
     }
 
     #[test]
     fn test_parse_binop_lt() {
         let expr = parser::ExprParser::new().parse("1 < 2").unwrap();
-        assert_eq!(
-            *expr,
-            Expr::BinOp(
-                BinOp::Lt,
-                Box::new(Expr::Int(1)),
-                Box::new(Expr::Int(2))
-            )
-        );
+        assert_eq!(*expr, Expr::BinOp(BinOp::Lt, Box::new(Expr::Int(1)), Box::new(Expr::Int(2))));
     }
 
     #[test]
     fn test_parse_binop_gt() {
         let expr = parser::ExprParser::new().parse("2 > 1").unwrap();
-        assert_eq!(
-            *expr,
-            Expr::BinOp(
-                BinOp::Gt,
-                Box::new(Expr::Int(2)),
-                Box::new(Expr::Int(1))
-            )
-        );
+        assert_eq!(*expr, Expr::BinOp(BinOp::Gt, Box::new(Expr::Int(2)), Box::new(Expr::Int(1))));
     }
 
     #[test]
     fn test_parse_binop_leq() {
         let expr = parser::ExprParser::new().parse("1 <= 2").unwrap();
-        assert_eq!(
-            *expr,
-            Expr::BinOp(
-                BinOp::Leq,
-                Box::new(Expr::Int(1)),
-                Box::new(Expr::Int(2))
-            )
-        );
+        assert_eq!(*expr, Expr::BinOp(BinOp::Leq, Box::new(Expr::Int(1)), Box::new(Expr::Int(2))));
     }
 
     #[test]
     fn test_parse_binop_geq() {
         let expr = parser::ExprParser::new().parse("2 >= 1").unwrap();
-        assert_eq!(
-            *expr,
-            Expr::BinOp(
-                BinOp::Geq,
-                Box::new(Expr::Int(2)),
-                Box::new(Expr::Int(1))
-            )
-        );
+        assert_eq!(*expr, Expr::BinOp(BinOp::Geq, Box::new(Expr::Int(2)), Box::new(Expr::Int(1))));
     }
 
     #[test]
     fn test_parse_binop_and() {
-        let expr =
-            parser::ExprParser::new().parse("true && false").unwrap();
-        assert_eq!(
-            *expr,
-            Expr::BinOp(
-                BinOp::And,
-                Box::new(Expr::Bool(true)),
-                Box::new(Expr::Bool(false))
-            )
-        );
+        let expr = parser::ExprParser::new().parse("true && false").unwrap();
+        assert_eq!(*expr, Expr::BinOp(BinOp::And, Box::new(Expr::Bool(true)), Box::new(Expr::Bool(false))));
     }
 
     #[test]
     fn test_parse_binop_or() {
-        let expr =
-            parser::ExprParser::new().parse("true || false").unwrap();
-        assert_eq!(
-            *expr,
-            Expr::BinOp(
-                BinOp::Or,
-                Box::new(Expr::Bool(true)),
-                Box::new(Expr::Bool(false))
-            )
-        );
+        let expr = parser::ExprParser::new().parse("true || false").unwrap();
+        assert_eq!(*expr, Expr::BinOp(BinOp::Or, Box::new(Expr::Bool(true)), Box::new(Expr::Bool(false))));
     }
 
     #[test]
     fn test_precedence_add_vs_mul() {
-        let expr =
-            parser::ExprParser::new().parse("2 + 3 * 4").unwrap();
+        let expr = parser::ExprParser::new().parse("2 + 3 * 4").unwrap();
         match *expr {
             Expr::BinOp(BinOp::Add, left, right) => {
                 assert_eq!(*left, Expr::Int(2));
-                assert_eq!(
-                    *right,
-                    Expr::BinOp(
-                        BinOp::Mul,
-                        Box::new(Expr::Int(3)),
-                        Box::new(Expr::Int(4))
-                    )
-                );
+                assert_eq!(*right, Expr::BinOp(BinOp::Mul, Box::new(Expr::Int(3)), Box::new(Expr::Int(4))));
             },
             _ => panic!("Expected Add at top level"),
         }
@@ -561,26 +417,11 @@ mod tests {
 
     #[test]
     fn test_precedence_compare_vs_arith() {
-        let expr =
-            parser::ExprParser::new().parse("1 + 2 < 3 + 4").unwrap();
+        let expr = parser::ExprParser::new().parse("1 + 2 < 3 + 4").unwrap();
         match *expr {
             Expr::BinOp(BinOp::Lt, left, right) => {
-                assert_eq!(
-                    *left,
-                    Expr::BinOp(
-                        BinOp::Add,
-                        Box::new(Expr::Int(1)),
-                        Box::new(Expr::Int(2))
-                    )
-                );
-                assert_eq!(
-                    *right,
-                    Expr::BinOp(
-                        BinOp::Add,
-                        Box::new(Expr::Int(3)),
-                        Box::new(Expr::Int(4))
-                    )
-                );
+                assert_eq!(*left, Expr::BinOp(BinOp::Add, Box::new(Expr::Int(1)), Box::new(Expr::Int(2))));
+                assert_eq!(*right, Expr::BinOp(BinOp::Add, Box::new(Expr::Int(3)), Box::new(Expr::Int(4))));
             },
             _ => panic!("Expected Lt at top level"),
         }
@@ -588,18 +429,10 @@ mod tests {
 
     #[test]
     fn test_left_associativity_sub() {
-        let expr =
-            parser::ExprParser::new().parse("10 - 3 - 2").unwrap();
+        let expr = parser::ExprParser::new().parse("10 - 3 - 2").unwrap();
         match *expr {
             Expr::BinOp(BinOp::Sub, left, right) => {
-                assert_eq!(
-                    *left,
-                    Expr::BinOp(
-                        BinOp::Sub,
-                        Box::new(Expr::Int(10)),
-                        Box::new(Expr::Int(3))
-                    )
-                );
+                assert_eq!(*left, Expr::BinOp(BinOp::Sub, Box::new(Expr::Int(10)), Box::new(Expr::Int(3))));
                 assert_eq!(*right, Expr::Int(2));
             },
             _ => panic!("Expected Sub at top level"),
@@ -613,19 +446,10 @@ mod tests {
             .unwrap();
         match *expr {
             Expr::Ann(inner, ty) => {
-                assert_eq!(
-                    ty,
-                    Type::Arrow(
-                        Box::new(Type::Int),
-                        Box::new(Type::Int)
-                    )
-                );
+                assert_eq!(ty, Type::Arrow(Box::new(Type::Int), Box::new(Type::Int)));
                 match *inner {
                     Expr::Lambda(params, _, body) => {
-                        assert_eq!(
-                            params[0],
-                            ("x".to_string(), Type::Int)
-                        );
+                        assert_eq!(params[0], ("x".to_string(), Type::Int));
                         assert_eq!(*body, Expr::Var("x".to_string()));
                     },
                     _ => panic!("Expected Lambda inside Ann"),
@@ -637,9 +461,7 @@ mod tests {
 
     #[test]
     fn test_parse_let_no_annotation() {
-        let expr = parser::ExprParser::new()
-            .parse("let x = 1 in x")
-            .unwrap();
+        let expr = parser::ExprParser::new().parse("let x = 1 in x").unwrap();
         match *expr {
             Expr::Let(name, ann, val, body) => {
                 assert_eq!(name, "x");
@@ -653,9 +475,7 @@ mod tests {
 
     #[test]
     fn test_parse_let_with_annotation() {
-        let expr = parser::ExprParser::new()
-            .parse("let x: Int = 1 in x")
-            .unwrap();
+        let expr = parser::ExprParser::new().parse("let x: Int = 1 in x").unwrap();
         match *expr {
             Expr::Let(name, ann, val, body) => {
                 assert_eq!(name, "x");
@@ -681,61 +501,34 @@ mod tests {
                         Box::new(Type::Bool),
                         Box::new(Type::Arrow(
                             Box::new(Type::Int),
-                            Box::new(Type::Arrow(
-                                Box::new(Type::Int),
-                                Box::new(Type::Int)
-                            ))
+                            Box::new(Type::Arrow(Box::new(Type::Int), Box::new(Type::Int)))
                         ))
                     ))
                 );
                 match *val {
                     Expr::Lambda(params, ty, lambda_body) => {
                         assert_eq!(params.len(), 3);
-                        assert_eq!(
-                            params[0],
-                            ("b".to_string(), Type::Bool)
-                        );
-                        assert_eq!(
-                            params[1],
-                            ("x".to_string(), Type::Int)
-                        );
-                        assert_eq!(
-                            params[2],
-                            ("y".to_string(), Type::Int)
-                        );
+                        assert_eq!(params[0], ("b".to_string(), Type::Bool));
+                        assert_eq!(params[1], ("x".to_string(), Type::Int));
+                        assert_eq!(params[2], ("y".to_string(), Type::Int));
                         assert_eq!(ty, Some(Type::Int));
                         match *lambda_body {
-                            Expr::If(
-                                cond,
-                                then_branch,
-                                else_branch,
-                            ) => {
-                                assert_eq!(
-                                    *cond,
-                                    Expr::Var("b".to_string())
-                                );
+                            Expr::If(cond, then_branch, else_branch) => {
+                                assert_eq!(*cond, Expr::Var("b".to_string()));
                                 assert_eq!(
                                     *then_branch,
                                     Expr::BinOp(
                                         BinOp::Add,
-                                        Box::new(Expr::Var(
-                                            "x".to_string()
-                                        )),
-                                        Box::new(Expr::Var(
-                                            "y".to_string()
-                                        ))
+                                        Box::new(Expr::Var("x".to_string())),
+                                        Box::new(Expr::Var("y".to_string()))
                                     )
                                 );
                                 assert_eq!(
                                     *else_branch,
                                     Expr::BinOp(
                                         BinOp::Sub,
-                                        Box::new(Expr::Var(
-                                            "x".to_string()
-                                        )),
-                                        Box::new(Expr::Var(
-                                            "y".to_string()
-                                        ))
+                                        Box::new(Expr::Var("x".to_string())),
+                                        Box::new(Expr::Var("y".to_string()))
                                     )
                                 );
                             },
@@ -752,9 +545,7 @@ mod tests {
                         assert_eq!(args[2], Expr::Int(5));
                         match *func {
                             Expr::Var(ref name) if name == "f" => {},
-                            _ => panic!(
-                                "Expected Var 'f' as function in App"
-                            ),
+                            _ => panic!("Expected Var 'f' as function in App"),
                         }
                     },
                     _ => panic!("Expected App as body of Let"),
@@ -803,13 +594,7 @@ mod tests {
                 assert_eq!(fargs.len(), 1);
                 assert_eq!(fargs[0], ("n".to_string(), Type::Int));
                 assert_eq!(fret_ty, Type::Int);
-                assert_eq!(
-                    *body,
-                    Expr::App(
-                        Box::new(Expr::Var("fact".to_string())),
-                        vec![Expr::Int(5)]
-                    )
-                );
+                assert_eq!(*body, Expr::App(Box::new(Expr::Var("fact".to_string())), vec![Expr::Int(5)]));
             },
             _ => panic!("Expected Expr::LetRec"),
         }
@@ -817,7 +602,9 @@ mod tests {
 
     #[test]
     fn test_parse_letrec_multi_args() {
-        let expr = parser::ExprParser::new().parse("let rec add (x: Int) (y: Int) : Int = x + y in add 1 2").unwrap();
+        let expr = parser::ExprParser::new()
+            .parse("let rec add (x: Int) (y: Int) : Int = x + y in add 1 2")
+            .unwrap();
         match *expr {
             Expr::LetRec(fname, fargs, fret_ty, _, _) => {
                 assert_eq!(fname, "add");
@@ -831,25 +618,15 @@ mod tests {
     #[test]
     fn test_parse_app_single_arg() {
         let expr = parser::ExprParser::new().parse("f 1").unwrap();
-        assert_eq!(
-            *expr,
-            Expr::App(
-                Box::new(Expr::Var("f".to_string())),
-                vec![Expr::Int(1)]
-            )
-        );
+        assert_eq!(*expr, Expr::App(Box::new(Expr::Var("f".to_string())), vec![Expr::Int(1)]));
     }
 
     #[test]
     fn test_parse_app_multi_args() {
-        let expr =
-            parser::ExprParser::new().parse("f 1 2 3").unwrap();
+        let expr = parser::ExprParser::new().parse("f 1 2 3").unwrap();
         assert_eq!(
             *expr,
-            Expr::App(
-                Box::new(Expr::Var("f".to_string())),
-                vec![Expr::Int(1), Expr::Int(2), Expr::Int(3)]
-            )
+            Expr::App(Box::new(Expr::Var("f".to_string())), vec![Expr::Int(1), Expr::Int(2), Expr::Int(3)])
         );
     }
 
@@ -864,10 +641,7 @@ mod tests {
                 match *func {
                     Expr::Lambda(params, ty, body) => {
                         assert_eq!(ty, Some(Int));
-                        assert_eq!(
-                            params[0],
-                            ("x".to_string(), Type::Int)
-                        );
+                        assert_eq!(params[0], ("x".to_string(), Type::Int));
                         assert_eq!(*body, Expr::Var("x".to_string()));
                     },
                     _ => panic!("Expected Lambda as function"),
@@ -879,21 +653,13 @@ mod tests {
 
     #[test]
     fn test_parse_lambda_single_param() {
-        let expr = parser::ExprParser::new()
-            .parse("fun (x: Bool) => !x")
-            .unwrap();
+        let expr = parser::ExprParser::new().parse("fun (x: Bool) => !x").unwrap();
         match *expr {
             Expr::Lambda(params, ty, body) => {
                 assert_eq!(ty, None);
                 assert_eq!(params.len(), 1);
                 assert_eq!(params[0], ("x".to_string(), Type::Bool));
-                assert_eq!(
-                    *body,
-                    Expr::UnaryOp(
-                        UnaryOp::Not,
-                        Box::new(Expr::Var("x".to_string()))
-                    )
-                );
+                assert_eq!(*body, Expr::UnaryOp(UnaryOp::Not, Box::new(Expr::Var("x".to_string()))));
             },
             _ => panic!("Expected Expr::Lambda"),
         }
@@ -901,9 +667,7 @@ mod tests {
 
     #[test]
     fn test_parse_lambda_unit_param() {
-        let expr = parser::ExprParser::new()
-            .parse("fun (x: Unit) : Unit => ()")
-            .unwrap();
+        let expr = parser::ExprParser::new().parse("fun (x: Unit) : Unit => ()").unwrap();
         match *expr {
             Expr::Lambda(params, ty, body) => {
                 assert_eq!(ty, Some(Unit));
@@ -938,27 +702,12 @@ mod tests {
 
     #[test]
     fn test_parse_if_with_binop_condition() {
-        let expr = parser::ExprParser::new()
-            .parse("if x > 0 then x else -x")
-            .unwrap();
+        let expr = parser::ExprParser::new().parse("if x > 0 then x else -x").unwrap();
         match *expr {
             Expr::If(cond, then_branch, else_branch) => {
-                assert_eq!(
-                    *cond,
-                    Expr::BinOp(
-                        BinOp::Gt,
-                        Box::new(Expr::Var("x".to_string())),
-                        Box::new(Expr::Int(0))
-                    )
-                );
+                assert_eq!(*cond, Expr::BinOp(BinOp::Gt, Box::new(Expr::Var("x".to_string())), Box::new(Expr::Int(0))));
                 assert_eq!(*then_branch, Expr::Var("x".to_string()));
-                assert_eq!(
-                    *else_branch,
-                    Expr::UnaryOp(
-                        UnaryOp::Neg,
-                        Box::new(Expr::Var("x".to_string()))
-                    )
-                );
+                assert_eq!(*else_branch, Expr::UnaryOp(UnaryOp::Neg, Box::new(Expr::Var("x".to_string()))));
             },
             _ => panic!("Expected Expr::If"),
         }
@@ -966,20 +715,12 @@ mod tests {
 
     #[test]
     fn test_parse_type_arrow_right_assoc() {
-        let expr = parser::ExprParser::new()
-            .parse("(f : Int -> Int -> Bool)")
-            .unwrap();
+        let expr = parser::ExprParser::new().parse("(f : Int -> Int -> Bool)").unwrap();
         match *expr {
             Expr::Ann(_, ty) => {
                 assert_eq!(
                     ty,
-                    Type::Arrow(
-                        Box::new(Type::Int),
-                        Box::new(Type::Arrow(
-                            Box::new(Type::Int),
-                            Box::new(Type::Bool)
-                        ))
-                    )
+                    Type::Arrow(Box::new(Type::Int), Box::new(Type::Arrow(Box::new(Type::Int), Box::new(Type::Bool))))
                 );
             },
             _ => panic!("Expected Expr::Ann"),
@@ -988,8 +729,7 @@ mod tests {
 
     #[test]
     fn test_parse_type_var() {
-        let expr =
-            parser::ExprParser::new().parse("(x : a)").unwrap();
+        let expr = parser::ExprParser::new().parse("(x : a)").unwrap();
         match *expr {
             Expr::Ann(_, ty) => {
                 assert_eq!(ty, Type::Var("a".to_string()));
@@ -1010,11 +750,7 @@ mod tests {
 
     #[test]
     fn test_parse_error_missing_else() {
-        assert!(
-            parser::ExprParser::new()
-                .parse("if true then 1")
-                .is_err()
-        );
+        assert!(parser::ExprParser::new().parse("if true then 1").is_err());
     }
 
     #[test]

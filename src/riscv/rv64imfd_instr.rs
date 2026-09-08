@@ -1,7 +1,4 @@
-use crate::riscv::rv64imfd_imm::{
-    Imm12, Imm13LowZeroBits1, Imm21LowZeroBits1, Imm32LowZeroBits12,
-    Shamt5, Shamt6,
-};
+use crate::riscv::rv64imfd_imm::{Imm12, Imm13LowZeroBits1, Imm21LowZeroBits1, Imm32LowZeroBits12, Shamt5, Shamt6};
 use crate::riscv::rv64imfd_reg::{FReg, XReg};
 use std::fmt;
 
@@ -38,7 +35,7 @@ impl fmt::Display for Rm {
 
 /// RISC-V RV64 instruction
 #[derive(Debug, Clone, PartialEq)]
-pub enum RvInst {
+pub enum RvInstr {
     // R-type
     Add {
         rd: XReg,
@@ -808,7 +805,7 @@ pub enum RvInst {
     Unimp,
 }
 
-impl fmt::Display for RvInst {
+impl fmt::Display for RvInstr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Add { rd, rs1, rs2 } => {
@@ -1215,31 +1212,31 @@ impl fmt::Display for RvInst {
 }
 
 /// 伪指令：单精度浮点拷贝 rd = rs，展开为 fsgnj.s rd, rs, rs
-pub fn fmv_s(rd: FReg, rs: FReg) -> RvInst {
-    RvInst::FsgnjS { rd: rd, rs1: rs, rs2: rs }
+pub fn fmv_s(rd: FReg, rs: FReg) -> RvInstr {
+    RvInstr::FsgnjS { rd: rd, rs1: rs, rs2: rs }
 }
 
 /// 伪指令：双精度浮点拷贝 rd = rs，展开为 fsgnj.d rd, rs, rs
-pub fn fmv_d(rd: FReg, rs: FReg) -> RvInst {
-    RvInst::FsgnjD { rd: rd, rs1: rs, rs2: rs }
+pub fn fmv_d(rd: FReg, rs: FReg) -> RvInstr {
+    RvInstr::FsgnjD { rd: rd, rs1: rs, rs2: rs }
 }
 
 /// 伪指令：单精度取负 rd = -rs，展开为 fsgnjn.s rd, rs, rs
-pub fn fneg_s(rd: FReg, rs: FReg) -> RvInst {
-    RvInst::FsgnjnS { rd: rd, rs1: rs, rs2: rs }
+pub fn fneg_s(rd: FReg, rs: FReg) -> RvInstr {
+    RvInstr::FsgnjnS { rd: rd, rs1: rs, rs2: rs }
 }
 
 /// 伪指令：双精度取负 rd = -rs，展开为 fsgnjn.d rd, rs, rs
-pub fn fneg_d(rd: FReg, rs: FReg) -> RvInst {
-    RvInst::FsgnjnD { rd: rd, rs1: rs, rs2: rs }
+pub fn fneg_d(rd: FReg, rs: FReg) -> RvInstr {
+    RvInstr::FsgnjnD { rd: rd, rs1: rs, rs2: rs }
 }
 
 /// 伪指令：单精度取绝对值 rd = |rs|，展开为 fsgnjx.s rd, rs, rs
-pub fn fabs_s(rd: FReg, rs: FReg) -> RvInst {
-    RvInst::FsgnjxS { rd: rd, rs1: rs, rs2: rs }
+pub fn fabs_s(rd: FReg, rs: FReg) -> RvInstr {
+    RvInstr::FsgnjxS { rd: rd, rs1: rs, rs2: rs }
 }
 
 /// 伪指令：双精度取绝对值 rd = |rs|，展开为 fsgnjx.d rd, rs, rs
-pub fn fabs_d(rd: FReg, rs: FReg) -> RvInst {
-    RvInst::FsgnjxD { rd: rd, rs1: rs, rs2: rs }
+pub fn fabs_d(rd: FReg, rs: FReg) -> RvInstr {
+    RvInstr::FsgnjxD { rd: rd, rs1: rs, rs2: rs }
 }

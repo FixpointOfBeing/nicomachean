@@ -41,65 +41,34 @@ pub enum TypeError {
 }
 
 impl std::fmt::Display for TypeError {
-    fn fmt(
-        &self,
-        f: &mut std::fmt::Formatter<'_>,
-    ) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             TypeError::UnboundVariable(name) => {
                 write!(f, "Unbound variable: {}", name)
             },
             TypeError::Mismatch { expected, found } => {
-                write!(
-                    f,
-                    "Type mismatch: expected {:?}, found {:?}",
-                    expected, found
-                )
+                write!(f, "Type mismatch: expected {:?}, found {:?}", expected, found)
             },
             TypeError::ReturnTypeMismatch { expected, found } => {
-                write!(
-                    f,
-                    "Return type mismatch: expected {:?}, found {:?}",
-                    expected, found
-                )
+                write!(f, "Return type mismatch: expected {:?}, found {:?}", expected, found)
             },
             TypeError::NotAFunction(ty) => {
                 write!(f, "Not a function: {:?}", ty)
             },
             TypeError::ArityMismatch { expected, found } => {
-                write!(
-                    f,
-                    "Arity mismatch: expected {} args, got {}",
-                    expected, found
-                )
+                write!(f, "Arity mismatch: expected {} args, got {}", expected, found)
             },
             TypeError::BranchMismatch { then_ty, else_ty } => {
-                write!(
-                    f,
-                    "If branches have different types: then={:?}, else={:?}",
-                    then_ty, else_ty
-                )
+                write!(f, "If branches have different types: then={:?}, else={:?}", then_ty, else_ty)
             },
             TypeError::InvalidOperands { op, left, right } => {
-                write!(
-                    f,
-                    "Operator `{}` cannot be applied to {:?} and {:?}",
-                    op, left, right
-                )
+                write!(f, "Operator `{}` cannot be applied to {:?} and {:?}", op, left, right)
             },
             TypeError::InvalidUnary { op, ty } => {
-                write!(
-                    f,
-                    "Operator `{}` cannot be applied to {:?}",
-                    op, ty
-                )
+                write!(f, "Operator `{}` cannot be applied to {:?}", op, ty)
             },
             TypeError::AnnotationMismatch { annotated, inferred } => {
-                write!(
-                    f,
-                    "Annotation mismatch: declared {:?}, inferred {:?}",
-                    annotated, inferred
-                )
+                write!(f, "Annotation mismatch: declared {:?}, inferred {:?}", annotated, inferred)
             },
         }
     }
@@ -128,17 +97,11 @@ pub fn typecheck(expr: Expr) -> Result<(Type, TypedExpr), TypeError> {
     infer(&Context::new(), expr)
 }
 
-pub fn typecheck_with_ctx(
-    ctx: &Context,
-    expr: Expr,
-) -> Result<(Type, TypedExpr), TypeError> {
+pub fn typecheck_with_ctx(ctx: &Context, expr: Expr) -> Result<(Type, TypedExpr), TypeError> {
     infer(ctx, expr)
 }
 
-fn infer(
-    ctx: &Context,
-    expr: Expr,
-) -> Result<(Type, TypedExpr), TypeError> {
+fn infer(ctx: &Context, expr: Expr) -> Result<(Type, TypedExpr), TypeError> {
     match expr {
         Expr::Unit => Ok((Type::Unit, TypedExpr::Unit)),
         Expr::Bool(b) => Ok((Type::Bool, TypedExpr::Bool(b))),
@@ -146,10 +109,7 @@ fn infer(
         Expr::Float(f) => Ok((Type::Float, TypedExpr::Float(f))),
 
         Expr::Var(name) => match ctx.lookup(&name) {
-            Some(ty) => Ok((
-                (*ty).clone(),
-                TypedExpr::Var(name.to_string(), (*ty).clone()),
-            )),
+            Some(ty) => Ok(((*ty).clone(), TypedExpr::Var(name.to_string(), (*ty).clone()))),
             None => Err(TypeError::UnboundVariable(name.clone())),
         },
 
@@ -157,10 +117,7 @@ fn infer(
             let res = infer(ctx, *inner)?;
             let inferred = res.0.clone();
             if inferred != ann_ty {
-                return Err(TypeError::AnnotationMismatch {
-                    annotated: ann_ty,
-                    inferred,
-                });
+                return Err(TypeError::AnnotationMismatch { annotated: ann_ty, inferred });
             }
             Ok(res)
         },
@@ -169,32 +126,12 @@ fn infer(
             let (ty, typed_operand) = infer(ctx, *operand)?;
             match op {
                 UnaryOp::Neg => match &ty {
-                    Type::Int | Type::Float => Ok((
-                        ty.clone(),
-                        (TypedExpr::UnaryOp(
-                            op,
-                            Box::new(typed_operand),
-                            ty,
-                        )),
-                    )),
-                    _ => Err(TypeError::InvalidUnary {
-                        op: "-".to_string(),
-                        ty,
-                    }),
+                    Type::Int | Type::Float => Ok((ty.clone(), (TypedExpr::UnaryOp(op, Box::new(typed_operand), ty)))),
+                    _ => Err(TypeError::InvalidUnary { op: "-".to_string(), ty }),
                 },
                 UnaryOp::Not => match &ty {
-                    Type::Bool => Ok((
-                        ty.clone(),
-                        (TypedExpr::UnaryOp(
-                            op,
-                            Box::new(typed_operand),
-                            ty,
-                        )),
-                    )),
-                    _ => Err(TypeError::InvalidUnary {
-                        op: "!".to_string(),
-                        ty,
-                    }),
+                    Type::Bool => Ok((ty.clone(), (TypedExpr::UnaryOp(op, Box::new(typed_operand), ty)))),
+                    _ => Err(TypeError::InvalidUnary { op: "!".to_string(), ty }),
                 },
             }
         },
@@ -213,19 +150,11 @@ fn infer(
             let (else_ty, typed_else_expr) = infer(ctx, *els)?;
 
             if then_ty != else_ty {
-                return Err(TypeError::BranchMismatch {
-                    then_ty,
-                    else_ty,
-                });
+                return Err(TypeError::BranchMismatch { then_ty, else_ty });
             }
             Ok((
                 then_ty.clone(),
-                TypedExpr::If(
-                    Box::new(typed_cond_expr),
-                    Box::new(typed_then_expr),
-                    Box::new(typed_else_expr),
-                    then_ty,
-                ),
+                TypedExpr::If(Box::new(typed_cond_expr), Box::new(typed_then_expr), Box::new(typed_else_expr), then_ty),
             ))
         },
 
@@ -234,45 +163,26 @@ fn infer(
 
             if let Some(ann_ty) = ann {
                 if rhs_ty != ann_ty {
-                    return Err(TypeError::AnnotationMismatch {
-                        annotated: ann_ty,
-                        inferred: rhs_ty,
-                    });
+                    return Err(TypeError::AnnotationMismatch { annotated: ann_ty, inferred: rhs_ty });
                 }
             }
 
             let ctx2 = ctx.extend(name.clone(), rhs_ty.clone());
             let (body_ty, typed_body) = infer(&ctx2, *body)?;
-            Ok((
-                body_ty.clone(),
-                TypedExpr::Let(
-                    name,
-                    rhs_ty,
-                    Box::new(typed_rhs),
-                    Box::new(typed_body),
-                    body_ty,
-                ),
-            ))
+            Ok((body_ty.clone(), TypedExpr::Let(name, rhs_ty, Box::new(typed_rhs), Box::new(typed_body), body_ty)))
         },
 
         Expr::LetRec(fname, fparams, fret_ty, body, rest) => {
-            let fn_ty = build_arrow(
-                fparams.iter().map(|(_, t)| t.clone()).collect(),
-                fret_ty.clone(),
-            );
+            let fn_ty = build_arrow(fparams.iter().map(|(_, t)| t.clone()).collect(), fret_ty.clone());
 
-            let mut body_ctx =
-                ctx.extend(fname.clone(), fn_ty.clone());
+            let mut body_ctx = ctx.extend(fname.clone(), fn_ty.clone());
             for (param_name, param_ty) in fparams.clone() {
                 body_ctx = body_ctx.extend(param_name, param_ty);
             }
 
             let (fbody_ty, typed_fbody) = infer(&body_ctx, *body)?;
             if fbody_ty != fret_ty {
-                return Err(TypeError::AnnotationMismatch {
-                    annotated: fret_ty,
-                    inferred: fbody_ty,
-                });
+                return Err(TypeError::AnnotationMismatch { annotated: fret_ty, inferred: fbody_ty });
             }
 
             let rest_ctx = ctx.extend(fname.clone(), fn_ty);
@@ -298,19 +208,11 @@ fn infer(
             let (body_ty, typed_body) = infer(&lam_ctx, *body)?;
             if let Some(rt_ty) = opty {
                 if body_ty != rt_ty {
-                    return Err(TypeError::ReturnTypeMismatch {
-                        expected: rt_ty,
-                        found: body_ty,
-                    });
+                    return Err(TypeError::ReturnTypeMismatch { expected: rt_ty, found: body_ty });
                 }
             }
             let lambda_ty = build_arrow(param_tys, body_ty.clone());
-            let typed_lambda = TypedExpr::Lambda(
-                params,
-                body_ty,
-                Box::new(typed_body),
-                lambda_ty.clone(),
-            );
+            let typed_lambda = TypedExpr::Lambda(params, body_ty, Box::new(typed_body), lambda_ty.clone());
             Ok((lambda_ty, typed_lambda))
         },
 
@@ -323,10 +225,7 @@ fn infer(
                     Type::Arrow(param_ty, ret_ty) => {
                         let (arg_ty, typed_arg) = infer(ctx, arg)?;
                         if arg_ty != *param_ty {
-                            return Err(TypeError::Mismatch {
-                                expected: *param_ty,
-                                found: arg_ty,
-                            });
+                            return Err(TypeError::Mismatch { expected: *param_ty, found: arg_ty });
                         }
                         typed_args.push(typed_arg);
                         curr_ty = *ret_ty;
@@ -336,24 +235,14 @@ fn infer(
                     },
                 }
             }
-            Ok((
-                curr_ty.clone(),
-                TypedExpr::App(
-                    Box::new(typed_fn),
-                    typed_args,
-                    curr_ty,
-                ),
-            ))
+            Ok((curr_ty.clone(), TypedExpr::App(Box::new(typed_fn), typed_args, curr_ty)))
         },
     }
 }
 
 fn check(expected: &Type, inferred: &Type) -> Result<(), TypeError> {
     if inferred != expected {
-        Err(TypeError::Mismatch {
-            expected: expected.clone(),
-            found: inferred.clone(),
-        })
+        Err(TypeError::Mismatch { expected: expected.clone(), found: inferred.clone() })
     } else {
         Ok(())
     }
@@ -374,66 +263,30 @@ fn infer_binop(
     right_ty_e: TypedExpr,
 ) -> Result<(Type, TypedExpr), TypeError> {
     let op_str = format!("{:?}", op);
-    let make_ty_expr = |ty: Type| {
-        TypedExpr::BinOp(
-            op.clone(),
-            Box::new(left_ty_e),
-            Box::new(right_ty_e),
-            ty,
-        )
-    };
+    let make_ty_expr = |ty: Type| TypedExpr::BinOp(op.clone(), Box::new(left_ty_e), Box::new(right_ty_e), ty);
     match op {
-        BinOp::Add | BinOp::Sub | BinOp::Mul | BinOp::Div => {
-            match (&left_ty, &right_ty) {
-                (Type::Int, Type::Int) => {
-                    Ok((Type::Int, make_ty_expr(Type::Int)))
-                },
-                (Type::Float, Type::Float) => {
-                    Ok((Type::Float, make_ty_expr(Type::Float)))
-                },
-                _ => Err(TypeError::InvalidOperands {
-                    op: op_str,
-                    left: left_ty,
-                    right: right_ty,
-                }),
-            }
+        BinOp::Add | BinOp::Sub | BinOp::Mul | BinOp::Div => match (&left_ty, &right_ty) {
+            (Type::Int, Type::Int) => Ok((Type::Int, make_ty_expr(Type::Int))),
+            (Type::Float, Type::Float) => Ok((Type::Float, make_ty_expr(Type::Float))),
+            _ => Err(TypeError::InvalidOperands { op: op_str, left: left_ty, right: right_ty }),
         },
 
-        BinOp::Lt | BinOp::Gt | BinOp::Leq | BinOp::Geq => {
-            match (&left_ty, &right_ty) {
-                (Type::Int, Type::Int)
-                | (Type::Float, Type::Float) => {
-                    Ok((Type::Bool, make_ty_expr(Type::Bool)))
-                },
-                _ => Err(TypeError::InvalidOperands {
-                    op: op_str,
-                    left: left_ty,
-                    right: right_ty,
-                }),
-            }
+        BinOp::Lt | BinOp::Gt | BinOp::Leq | BinOp::Geq => match (&left_ty, &right_ty) {
+            (Type::Int, Type::Int) | (Type::Float, Type::Float) => Ok((Type::Bool, make_ty_expr(Type::Bool))),
+            _ => Err(TypeError::InvalidOperands { op: op_str, left: left_ty, right: right_ty }),
         },
 
         BinOp::Eq | BinOp::Neq => {
             if left_ty == right_ty {
                 Ok((Type::Bool, make_ty_expr(Type::Bool)))
             } else {
-                Err(TypeError::InvalidOperands {
-                    op: op_str,
-                    left: left_ty,
-                    right: right_ty,
-                })
+                Err(TypeError::InvalidOperands { op: op_str, left: left_ty, right: right_ty })
             }
         },
 
         BinOp::And | BinOp::Or => match (&left_ty, &right_ty) {
-            (Type::Bool, Type::Bool) => {
-                Ok((Type::Bool, make_ty_expr(Type::Bool)))
-            },
-            _ => Err(TypeError::InvalidOperands {
-                op: op_str,
-                left: left_ty,
-                right: right_ty,
-            }),
+            (Type::Bool, Type::Bool) => Ok((Type::Bool, make_ty_expr(Type::Bool))),
+            _ => Err(TypeError::InvalidOperands { op: op_str, left: left_ty, right: right_ty }),
         },
     }
 }
@@ -446,10 +299,9 @@ mod tests {
     lalrpop_mod!(pub parser);
 
     fn tc(src: &str) -> Result<Type, TypeError> {
-        let expr =
-            parser::ExprParser::new().parse(src).unwrap_or_else(
-                |e| panic!("failed to parse `{}`: {:?}", src, e),
-            );
+        let expr = parser::ExprParser::new()
+            .parse(src)
+            .unwrap_or_else(|e| panic!("failed to parse `{}`: {:?}", src, e));
         match typecheck(*expr) {
             Ok((ty, _)) => Ok(ty),
             Err(e) => Err(e),
@@ -568,23 +420,14 @@ mod tests {
 
     #[test]
     fn test_lambda_identity_int() {
-        assert_eq!(
-            tc("fun (x: Int) => x"),
-            Ok(Type::Arrow(Box::new(Type::Int), Box::new(Type::Int)))
-        );
+        assert_eq!(tc("fun (x: Int) => x"), Ok(Type::Arrow(Box::new(Type::Int), Box::new(Type::Int))));
     }
 
     #[test]
     fn test_lambda_multi_param() {
         assert_eq!(
             tc("fun (x: Int) (y: Int) => x + y"),
-            Ok(Type::Arrow(
-                Box::new(Type::Int),
-                Box::new(Type::Arrow(
-                    Box::new(Type::Int),
-                    Box::new(Type::Int)
-                ))
-            ))
+            Ok(Type::Arrow(Box::new(Type::Int), Box::new(Type::Arrow(Box::new(Type::Int), Box::new(Type::Int)))))
         );
     }
 
@@ -592,13 +435,7 @@ mod tests {
     fn test_let_lambda() {
         assert_eq!(
             tc("let add (x: Int) (y: Int) = x + y in add"),
-            Ok(Type::Arrow(
-                Box::new(Type::Int),
-                Box::new(Type::Arrow(
-                    Box::new(Type::Int),
-                    Box::new(Type::Int)
-                ))
-            ))
+            Ok(Type::Arrow(Box::new(Type::Int), Box::new(Type::Arrow(Box::new(Type::Int), Box::new(Type::Int)))))
         );
     }
     #[test]
@@ -632,9 +469,7 @@ mod tests {
 
     #[test]
     fn test_letrec_wrong_body_type_err() {
-        assert!(
-            tc("let rec f (n: Int) : Int = true in f(0)").is_err()
-        );
+        assert!(tc("let rec f (n: Int) : Int = true in f(0)").is_err());
     }
 
     #[test]

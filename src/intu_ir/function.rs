@@ -12,13 +12,7 @@ pub struct Function {
 
 impl Typed for Function {
     fn get_type(&self, types: &Types) -> TypeRef {
-        types.func_type(
-            self.return_type.clone(),
-            self.parameters
-                .iter()
-                .map(|p| types.type_of(p))
-                .collect(),
-        )
+        types.func_type(self.return_type.clone(), self.parameters.iter().map(|p| types.type_of(p)).collect())
     }
 }
 

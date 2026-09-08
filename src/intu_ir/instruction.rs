@@ -147,12 +147,7 @@ pub enum Instruction {
     /// ```text
     /// %dest = insertvalue { i32, i32 } %agg, i32 %val, 1, 0
     /// ```
-    InsertValue {
-        aggregate: Operand,
-        element: Operand,
-        indices: Vec<u32>,
-        dest: Name,
-    },
+    InsertValue { aggregate: Operand, element: Operand, indices: Vec<u32>, dest: Name },
     /// `alloca` —— 在栈上分配内存，返回指向新分配内存的指针。
     /// 语法：
     /// ```text
@@ -171,12 +166,7 @@ pub enum Instruction {
     /// 语法：
     /// ```text
     /// %dest = load i32, ptr %p, align
-    Load {
-        address: Operand,
-        dest: Name,
-        loaded_ty: TypeRef,
-        alignment: u32,
-    },
+    Load { address: Operand, dest: Name, loaded_ty: TypeRef, alignment: u32 },
     /// `store` —— 把一个值写入指针指向的内存。
     ///
     /// 语法：
@@ -283,23 +273,13 @@ pub enum Instruction {
     /// 语法：
     /// ```text
     /// %dest = icmp slt i32 %a, %b
-    ICmp {
-        predicate: IntPredicate,
-        operand0: Operand,
-        operand1: Operand,
-        dest: Name,
-    },
+    ICmp { predicate: IntPredicate, operand0: Operand, operand1: Operand, dest: Name },
     /// `fcmp` —— 浮点比较，结果为 `i1`（向量操作数时为 `<N x i1>`）。
     ///
     /// 语法：
     /// ```text
     /// %dest = fcmp olt double %a, %b
-    FCmp {
-        predicate: FPPredicate,
-        operand0: Operand,
-        operand1: Operand,
-        dest: Name,
-    },
+    FCmp { predicate: FPPredicate, operand0: Operand, operand1: Operand, dest: Name },
     /// `call` —— 调用函数。
     ///
     /// 语法：
@@ -369,15 +349,9 @@ impl Typed for Instruction {
                 debug_assert_eq!(ty, types.type_of(operand1));
                 ty
             },
-            Instruction::Shl { operand0, .. } => {
-                types.type_of(operand0)
-            },
-            Instruction::LShr { operand0, .. } => {
-                types.type_of(operand0)
-            },
-            Instruction::AShr { operand0, .. } => {
-                types.type_of(operand0)
-            },
+            Instruction::Shl { operand0, .. } => types.type_of(operand0),
+            Instruction::LShr { operand0, .. } => types.type_of(operand0),
+            Instruction::AShr { operand0, .. } => types.type_of(operand0),
             Instruction::FAdd { operand0, operand1, .. } => {
                 let ty = types.type_of(operand0);
                 debug_assert_eq!(ty, types.type_of(operand1));
@@ -403,9 +377,7 @@ impl Typed for Instruction {
                 debug_assert_eq!(ty, types.type_of(operand1));
                 ty
             },
-            Instruction::FNeg { operand, .. } => {
-                types.type_of(operand)
-            },
+            Instruction::FNeg { operand, .. } => types.type_of(operand),
             Instruction::Alloca { .. } => types.pointer(),
             Instruction::Load { loaded_ty, .. } => loaded_ty.clone(),
             Instruction::Store { .. } => types.void(),
@@ -426,9 +398,7 @@ impl Typed for Instruction {
                 let ty = types.type_of(operand0);
                 debug_assert_eq!(ty, types.type_of(operand1));
                 match ty.as_ref() {
-                    InstType::VectorType { num_elements, .. } => {
-                        types.vector_of(types.bool(), *num_elements)
-                    },
+                    InstType::VectorType { num_elements, .. } => types.vector_of(types.bool(), *num_elements),
                     _ => types.bool(),
                 }
             },
@@ -436,47 +406,28 @@ impl Typed for Instruction {
                 let ty = types.type_of(operand0);
                 debug_assert_eq!(ty, types.type_of(operand1));
                 match ty.as_ref() {
-                    InstType::VectorType { num_elements, .. } => {
-                        types.vector_of(types.bool(), *num_elements)
-                    },
+                    InstType::VectorType { num_elements, .. } => types.vector_of(types.bool(), *num_elements),
                     _ => types.bool(),
                 }
             },
-            Instruction::Call { function_ty, .. } => {
-                match function_ty.as_ref() {
-                    InstType::FuncType { result_type, .. } => {
-                        result_type.clone()
-                    },
-                    ty => panic!(
-                        "Expected Call.function_ty to be a FuncType, got {:?}",
-                        ty
-                    ),
-                }
+            Instruction::Call { function_ty, .. } => match function_ty.as_ref() {
+                InstType::FuncType { result_type, .. } => result_type.clone(),
+                ty => panic!("Expected Call.function_ty to be a FuncType, got {:?}", ty),
             },
-            Instruction::ExtractValue {
-                aggregate, indices, ..
-            } => ev_type(
-                types.type_of(aggregate),
-                indices.iter().copied(),
-            ),
+            Instruction::ExtractValue { aggregate, indices, .. } => {
+                ev_type(types.type_of(aggregate), indices.iter().copied())
+            },
 
-            Instruction::InsertValue { aggregate, .. } => {
-                types.type_of(aggregate)
-            },
+            Instruction::InsertValue { aggregate, .. } => types.type_of(aggregate),
         }
     }
 }
 
-fn ev_type(
-    cur_type: TypeRef,
-    mut indices: impl Iterator<Item = u32>,
-) -> TypeRef {
+fn ev_type(cur_type: TypeRef, mut indices: impl Iterator<Item = u32>) -> TypeRef {
     match indices.next() {
         None => cur_type,
         Some(index) => match cur_type.as_ref() {
-            InstType::ArrayType { element_type, .. } => {
-                ev_type(element_type.clone(), indices)
-            },
+            InstType::ArrayType { element_type, .. } => ev_type(element_type.clone(), indices),
             InstType::StructType { element_types, .. } => ev_type(
                 element_types
                     .get(index as usize)
@@ -484,10 +435,7 @@ fn ev_type(
                     .clone(),
                 indices,
             ),
-            _ => panic!(
-                "ExtractValue from something that's not ArrayType or StructType; its type is {:?}",
-                cur_type
-            ),
+            _ => panic!("ExtractValue from something that's not ArrayType or StructType; its type is {:?}", cur_type),
         },
     }
 }

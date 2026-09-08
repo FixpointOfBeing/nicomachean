@@ -41,12 +41,8 @@ impl std::hash::Hash for Float {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         core::mem::discriminant(self).hash(state);
         match self {
-            Float::Single(f) => {
-                ordered_float::OrderedFloat(*f).hash(state)
-            },
-            Float::Double(f) => {
-                ordered_float::OrderedFloat(*f).hash(state)
-            },
+            Float::Single(f) => ordered_float::OrderedFloat(*f).hash(state),
+            Float::Double(f) => ordered_float::OrderedFloat(*f).hash(state),
         }
     }
 }
@@ -65,15 +61,9 @@ impl Typed for Constant {
         match self {
             Constant::Int { bits, .. } => types.int(*bits),
             Constant::Float(f) => types.type_of(f),
-            Constant::Struct { values, .. } => types.struct_of(
-                values.iter().map(|v| types.type_of(v)).collect(),
-            ),
-            Constant::Array { element_type, elements } => {
-                types.array_of(element_type.clone(), elements.len())
-            },
-            Constant::Vector(v) => {
-                types.vector_of(types.type_of(&v[0]), v.len())
-            },
+            Constant::Struct { values, .. } => types.struct_of(values.iter().map(|v| types.type_of(v)).collect()),
+            Constant::Array { element_type, elements } => types.array_of(element_type.clone(), elements.len()),
+            Constant::Vector(v) => types.vector_of(types.type_of(&v[0]), v.len()),
         }
     }
 }
