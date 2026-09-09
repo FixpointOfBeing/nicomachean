@@ -94,6 +94,10 @@ pub fn build_infer_graph(block: &RvVarBasicBlockLiveness) -> (RvVarLocationGraph
     let mut f_graph = RvVarLocationGraph::new();
 
     // block的live-in在入口处同时存活，必须两两分到不同寄存器
+    // 这里也保证了「同一riscv指令两个 source 必须不同」
+    // 它本质是「同时存活 ⇒ 干涉」的一个推论，而不是独立规则。设两个 source 是 s1、s2，某指令 d = s1 op s2：
+    // 两个都是参数：都在 live_in → interfere_block_live_in 连 s1–s2。
+    // 至少一个是块内定义：设 s2 在更晚的某条指令被定义。s2 定义时 s1 还活着（s1 从出生到 d = s1 op s2 一直在活），所以「def s2 vs live_after」会连 s2–s1。
     interfere_block_live_in(block, &mut x_graph, &mut f_graph);
 
     let empty = HashSet::new();
@@ -115,7 +119,7 @@ fn interfere_block_live_in(
 ) {
     let live_in: Vec<RvVarLocation> = block.live_in.iter().cloned().collect();
     for (i, loc0) in live_in.iter().enumerate() {
-        if is_x_location(loc0) {
+        if is_x_location(loc0) && loc0 != &RvVarLocation::XReg(XReg::ZERO) {
             x_graph.add_location(loc0);
         }
         if is_float_location(loc0) {
@@ -155,7 +159,9 @@ fn add_write_live_edge(
             x_graph.add_location(&write);
             for live in live_after {
                 if is_x_location(live) {
-                    x_graph.add_location(&live);
+                    if live != &RvVarLocation::XReg(XReg::ZERO) {
+                        x_graph.add_location(&live);
+                    }
                     x_graph.interfere(&write, live);
                 }
             }
@@ -417,7 +423,6 @@ fn color_graph(
         x_var_staturation.insert(location.clone(), staturation);
     }
 
-    dbg!("{}", &all_f_locations);
     // 初始化FVar的color和saturation
     for location in &all_f_var_locations {
         f_var_color.insert(location.clone(), UNCOLORED);
@@ -544,7 +549,6 @@ fn allocate_block(block: RvVarBasicBlock) -> RvVarBasicBlock {
     let (x_graph, f_graph) = build_infer_graph(&block_liveness);
     let (x_var_color, f_var_color) = color_graph(&x_graph, &f_graph);
 
-    dbg!("{}\n{}", &x_var_color, &f_var_color);
     let mut instrs = Vec::<RvVarInstr>::new();
     for instr in block.instrs {
         let mut map_dest = |location: RvVarLocation| location_to_reg(location, &x_var_color, &f_var_color);
@@ -680,6 +684,11 @@ mod tests {
     #[test]
     fn zero_source_is_ignored() {
         // instr0 的 live-after（= instr1 的 live_before）含 x0 与 b：x0 被忽略，只与 b 连边
+        /*
+         * add d, x, y
+         * {b}
+         * add z, p, q
+         */
         let g = x_graph_of(vec![
             il(RvVarInstr::Add { rd: ivar("d"), rs1: ivar("x"), rs2: ivar("y") }, &[]),
             il(RvVarInstr::Add { rd: ivar("z"), rs1: ivar("p"), rs2: ivar("q") }, &[x0(), ivar("b")]),
@@ -991,15 +1000,15 @@ mod tests {
     fn allocate_registers_leaves_no_virtual_locations() {
         use crate::riscv::rv64imfd_imm::Imm12;
 
-        /* {x, y}
+        /*   live-after: {x, y}
          * addi a, x0, 1
-         * {x, y, a}
+         *   live-after: {x, y, a}
          * addi b, x0, 2
-         * {x, y, a, b}
+         *   live-after: {x, y, a, b}
          * add  c, a,  b
-         * {x, y}
+         *   live-after: {x, y}
          * fadd.s d, x, y
-         * {}
+         *   live-after: {}
          */
         let instrs = vec![
             RvVarInstr::Addi { rd: ivar("a"), rs1: x0(), imm: Imm12::from_i16(1) },
@@ -1011,15 +1020,14 @@ mod tests {
         prog.append_basic_block(RvVarBasicBlock { name: crate::riscv::Label::new("bb".to_string()), instrs });
 
         let allocated = allocate_registers(prog);
-        println!("{}", allocated);
-        // for instr in &allocated.blocks[0].instrs {
-        //     let mut locs: Vec<RvVarLocation> = instr.source_locations().into_iter().collect();
-        //     if let Some(dest) = instr.dest_location() {
-        //         locs.push(dest);
-        //     }
-        //     for loc in locs {
-        //         assert!(!matches!(loc, RvVarLocation::XVar(_) | RvVarLocation::FVar(_)), "仍有未分配的虚拟位置 {loc}");
-        //     }
-        // }
+        for instr in &allocated.blocks[0].instrs {
+            let mut locs: Vec<RvVarLocation> = instr.source_locations().into_iter().collect();
+            if let Some(dest) = instr.dest_location() {
+                locs.push(dest);
+            }
+            for loc in locs {
+                assert!(!matches!(loc, RvVarLocation::XVar(_) | RvVarLocation::FVar(_)), "仍有未分配的虚拟位置 {loc}");
+            }
+        }
     }
 }
